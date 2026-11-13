@@ -1,0 +1,77 @@
+:root {
+  --bg-0: #04060f;
+  --bg-1: #080b1a;
+  --panel: rgba(10, 16, 34, 0.82);
+  --panel-solid: #0a1022;
+  --edge: rgba(90, 240, 255, 0.28);
+  --edge-strong: rgba(90, 240, 255, 0.7);
+  --cyan: #5af0ff;
+  --cyan-dim: #2aa7c4;
+  --magenta: #ff3ea5;
+  --gold: #ffd166;
+  --red: #ff4d6d;
+  --green: #4dffa6;
+  --violet: #a06bff;
+  --text: #dff3ff;
+  --text-dim: #7f97b8;
+  --ui-scale: 1;
+  --font-display: "Orbitron", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+#app-root,
+.game-root {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* --- utility --- */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
