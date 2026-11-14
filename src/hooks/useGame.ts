@@ -37,6 +37,9 @@ export interface DebugApi {
   setTimeScale(v: number): void;
   stats(): { fps: number; entities: number; phase: GamePhase };
   spritePng(key: string): string | null;
+  forceLevelUp(): void;
+  openArmory(): void;
+  killPlayer(): void;
 }
 
 export interface OverlayState {

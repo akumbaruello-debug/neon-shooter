@@ -59,9 +59,35 @@ const shots = [
     act: () => window.__ndDebug?.gotoStage?.(50),
     after: 14000,
   },
+  {
+    name: "08-pause-settings",
+    url: "/?autostart=1&debug=1&new=1",
+    wait: 13000,
+    keys: ["Escape"],
+    after: 1500,
+    clickText: "Settings",
+    after2: 1500,
+  },
+  {
+    name: "09-armory",
+    url: "/?autostart=1&debug=1&new=1",
+    wait: 5000,
+    act: () => window.__ndDebug?.openArmory?.(),
+    after: 2500,
+  },
+  {
+    name: "10-gameover",
+    url: "/?autostart=1&debug=1&new=1",
+    wait: 5000,
+    act: () => window.__ndDebug?.killPlayer?.(),
+    after: 2500,
+  },
 ];
 
 const errors = [];
+
+const only = process.env.SHOTS_ONLY;
+const active = only ? shots.filter((s) => s.name.includes(only)) : shots;
 
 const browser = await chromium.launch({
   channel: "chrome",
@@ -79,10 +105,22 @@ page.on("console", (m) => {
 });
 page.on("pageerror", (e) => errors.push(`[pageerror] ${e.message}`));
 
-for (const s of shots) {
+for (const s of active) {
   await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(s.wait);
   await page.mouse.move(640, 380);
+  if (s.keys) {
+    for (const k of s.keys) await page.keyboard.press(k);
+    await page.waitForTimeout(s.after ?? 800);
+  }
+  if (s.clickText) {
+    try {
+      await page.getByText(s.clickText, { exact: true }).first().click();
+    } catch {
+      console.log("  (clickText miss:", s.clickText, ")");
+    }
+    await page.waitForTimeout(s.after2 ?? 800);
+  }
   if (s.act) {
     await page.evaluate(s.act);
     await page.waitForTimeout(s.after ?? 1500);
@@ -104,4 +142,4 @@ if (relevant.length) {
   for (const e of relevant.slice(0, 20)) console.error(" ", e);
   process.exit(1);
 }
-console.log(`\nOK - ${shots.length} screenshots in ${out}`);
+console.log(`\nOK - ${active.length} screenshots in ${out}`);

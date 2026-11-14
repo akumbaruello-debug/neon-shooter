@@ -64,6 +64,8 @@ export interface DebugApi {
   gotoStage(n: number): void;
   setLevel(n: number): void;
   forceLevelUp(): void;
+  openArmory(): void;
+  killPlayer(): void;
   grantWeapon(id: WeaponId): void;
   grantSkill(id: string): void;
   godMode(v: boolean): void;
@@ -1080,6 +1082,16 @@ export class Game {
       this.progression.addXp(this.progression.xpToNext);
       this.progression.queueLevelUp(1);
       this.cardsCooldown = 0;
+    },
+    openArmory: () => {
+      const offer = this.progression.offerArmory();
+      this.mode = "armory";
+      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls });
+      this.emitPhase();
+    },
+    killPlayer: () => {
+      this.player.hull = 0;
+      this.onPlayerDeath();
     },
     grantWeapon: (id) => {
       this.progression.applyWeapon(id);

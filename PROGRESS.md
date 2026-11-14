@@ -39,13 +39,15 @@ Old vanilla game preserved in `legacy/` (snapshot commit `f2cf284` on `main`).
 - [x] countdown timeScale freeze fix
 - [x] autostart + checkpoint prompt + audio unlock hint
 - [x] 7 screenshots regenerated, no console errors (`node scripts/shots.mjs`)
-- [ ] balance tuning (30 flags from `scripts/balance.ts`)
-- [ ] launcher end-to-end test (2nd run reuses server) + README docs
+- [x] balance: 0 flags (`npm run balance` → `BALANCE: OK`); weapons within ±25% DPS, 22 stages retuned
+- [x] QA shots extended to 10 (title, stage, cards, telegraph, bosses 10/30/50, pause+settings, armory, game over)
+- [ ] launcher end-to-end GUI test (logic validated; browser open/close not run)
 - [ ] final playtest on real GPU
 
 ## Verification log
 - `npx tsc --noEmit` — clean
 - `npm run lint` — clean (0 errors, 0 warnings)
 - `npm run build` — passes (static, 4 pages)
-- `node scripts/shots.mjs` — 7 PNGs in `screenshots/`, no console errors
-- `npx tsx scripts/balance.ts` — runs; 30 flags (weapon DPS spread + late-stage duration) — tuning pending
+- `node scripts/shots.mjs` — 10 PNGs in `screenshots/`, no console errors
+- `npm run balance` — `BALANCE: OK` (0 flags); final level 41/40-45 PASS
+- Launcher: `Test-Port`/`Test-NeedBuild` validated (reuse + skip-build paths); GUI open/close not run
