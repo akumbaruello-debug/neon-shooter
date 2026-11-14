@@ -44,9 +44,13 @@ npm run lint
 npm run balance    # headless balance report (scripts/balance.ts)
 ```
 
-URL flags: `?autostart=1` skips the title and starts a run.
+URL flags: `?autostart=1` skips the title and starts a run (offers "Continue
+Stage N" if a checkpoint exists). Add `?new=1` to force a fresh run instead.
 `?debug=1` opens the developer panel (stage jump, level, grant weapon/skill,
 god mode, spawn enemy/boss, time scale, FPS/entity counters).
+
+Screenshots: `npm run shots` drives the system Chrome (no browser download) and
+writes PNGs to `screenshots/`; it needs the server running on :3123 first.
 
 ---
 
