@@ -5,3 +5,8 @@ out/
 .DS_Store
 tmp/
 temp/
+
+# local art sources, not shipped
+public/*.psd
+
+tsconfig.tsbuildinfo
