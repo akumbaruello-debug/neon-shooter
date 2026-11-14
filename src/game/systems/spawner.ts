@@ -65,7 +65,7 @@ export class StageDirector {
   private totalPlanned = 0;
   private overtimeCracked = false;
   private doneFlag = false;
-  private corridorX = ARENA_W / 2;
+  private corridorX = 0;
 
   constructor(
     private readonly ctx: GameCtx,

@@ -636,8 +636,8 @@ export class BossSystem {
   private pBulletCurtain(b: Enemy, dt: number): void {
     if (!this.auxInit) {
       this.auxInit = true;
-      this.addLine(0, b.y + 70, ARENA_W, b.y + 70, 22, 0.7, 0xff2a2a);
-      this.auxTimer = 0.7;
+      this.addLine(0, b.y + 70, ARENA_W, b.y + 70, 22, 0.8, 0xff2a2a);
+      this.auxTimer = 0.8;
       this.patternState = 0;
       this.auxAng = this.ctx.rng.range(400, ARENA_W - 400);
       this.auxSpeed = this.ctx.rng.chance(0.5) ? 1 : -1;

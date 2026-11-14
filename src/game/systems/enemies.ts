@@ -67,9 +67,14 @@ export class EnemySystem {
 
     const p = this.ctx.player;
     for (const e of pools.enemies.all()) {
-      if (!e.active || e.isBoss) continue;
-      e.age += dt;
+      if (!e.active) continue;
+      // The spawn grace must tick for bosses too, otherwise graceLeft stays
+      // frozen at SPAWN_GRACE and the contact check in collisions.ts skips them
+      // forever. Boss AI itself is driven by BossSystem, so bosses still skip
+      // the per-kind movement/attack block below.
       if (e.graceLeft > 0) e.graceLeft -= dt;
+      if (e.isBoss) continue;
+      e.age += dt;
       if (e.spawnFx > 0) e.spawnFx = Math.max(0, e.spawnFx - dt / SPAWN_FX_TIME);
       if (e.flash > 0) e.flash = Math.max(0, e.flash - dt * 4);
 

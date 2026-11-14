@@ -13,6 +13,7 @@ import { Player } from "./player";
 import { Renderer, NullRenderer } from "./render/renderer";
 import { save } from "./save";
 import {
+  ARENA_H,
   ARENA_W,
   ENEMY_BULLET,
   LEVELUP_SLOWMO,
@@ -29,15 +30,19 @@ import { BossSystem } from "./systems/bosses";
 import { EnemySystem } from "./systems/enemies";
 import { Progression, sectorOf } from "./systems/progression";
 import { StageDirector } from "./systems/spawner";
-import { WeaponSystem } from "./systems/weapons";
+import { WeaponSystem, DRONE_SHOT_INTERVAL } from "./systems/weapons";
 import { WEAPONS } from "./data/weapons";
+import { SKILLS } from "./data/skills";
 import type {
+  ActionName,
   CardOffer,
   GameOverSummary,
   GamePhase,
   HudState,
   HudSkill,
   Settings,
+  SkillId,
+  SkillRosterEntry,
   WeaponCard,
   WeaponId,
 } from "./types";
@@ -47,7 +52,7 @@ export interface GameEvents {
   hud: HudState;
   phase: GamePhase;
   cards: { header: string; offers: CardOffer[]; rerolls: number };
-  armory: { offers: WeaponCard[]; rerolls: number };
+  armory: { offers: WeaponCard[]; rerolls: number; skills: HudSkill[] };
   boons: { offers: CardOffer[] };
   stageBanner: { stage: number; sector: number; title: string };
   threatUp: { tier: number };
@@ -74,6 +79,45 @@ export interface DebugApi {
   setTimeScale(v: number): void;
   stats(): { fps: number; entities: number; phase: GamePhase };
   spritePng(key: string): string | null;
+  playerState(): {
+    x: number;
+    y: number;
+    hull: number;
+    hullMax: number;
+    shield: number;
+    shieldMax: number;
+    alive: boolean;
+    invuln: boolean;
+  };
+  setPlayerPos(x: number, y: number): void;
+  arena(): { w: number; h: number };
+  activateSkill(slot: number): boolean;
+  skillState(): {
+    slot: number;
+    id: string;
+    level: number;
+    cooldown: number;
+    cooldownMax: number;
+    active: boolean;
+  }[];
+  passiveMods(): Record<string, number | boolean>;
+  setSkillLevel(id: string, level: number): void;
+  enemyCount(): number;
+  clearEnemies(): void;
+  spawnEnemyAt(defId: string, x: number, y: number): void;
+  grantSkillCard(id: string): void;
+  hudSkills(): {
+    slot: number;
+    id: string;
+    name: string;
+    keyLabel: string;
+    cooldown: number;
+    cooldownMax: number;
+    ready: boolean;
+  }[];
+  enemyTimeScale(): number;
+  drones(): number;
+  bulletCounts(): { player: number; enemy: number };
 }
 
 type Mode = GamePhase;
@@ -121,11 +165,20 @@ export class Game {
   private pendingBoons = false;
   private supplyDone = false;
   private cardsCooldown = 0;
+  private droneTick = 0;
   private reviveAvailable = false;
   private disposed = false;
   private ready: Promise<void>;
 
   private hudCache: HudState;
+
+  /** Auto-pause when the window/tab loses focus (matches README/PROGRESS claims). */
+  private readonly onBlur = (): void => {
+    if (this.mode === "playing") this.pause();
+  };
+  private readonly onVisibilityChange = (): void => {
+    if (document.hidden && this.mode === "playing") this.pause();
+  };
 
   constructor(host: HTMLElement, settings: Settings, private autostart = false) {
     this.host = host;
@@ -151,6 +204,7 @@ export class Game {
 
     this.loop = new GameLoop({
       update: (dt) => this.update(dt),
+      afterUpdate: () => this.afterUpdate(),
       render: (alpha, frameDt) => this.render(alpha, frameDt),
     });
 
@@ -181,6 +235,8 @@ export class Game {
 
     const onResize = () => this.renderer?.resize();
     window.addEventListener("resize", onResize);
+    window.addEventListener("blur", this.onBlur);
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.loop.start();
     this.emitPhase();
   }
@@ -410,6 +466,7 @@ export class Game {
     this.lastOffers = null;
     this.lastBoons = [];
     this.cardsCooldown = 0;
+    this.droneTick = 0;
     this.stageTransition = 0;
 
     this.stage = stage;
@@ -563,7 +620,7 @@ export class Game {
       this.events.emit("cards", { header: offer.header, offers: offer.offers, rerolls: this.progression.rerolls });
     } else {
       const offer = this.progression.offerArmory();
-      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls });
+      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls, skills: this.hudSkills() });
     }
   }
 
@@ -721,11 +778,15 @@ export class Game {
 
   // ------------------------------------------------------------------ update
 
+  /** Consume input edges for this step. Called by the loop after update(). */
+  afterUpdate(): void {
+    this.input.endFrame();
+  }
+
   private update(dt: number): void {
     if (dt <= 0) return;
 
     // Timers that must advance regardless of mode.
-    this.input.endFrame();
     if (this.cardsCooldown > 0) this.cardsCooldown = Math.max(0, this.cardsCooldown - dt);
 
     if (this.mode === "menu" || this.mode === "gameover" || this.mode === "victory") {
@@ -734,7 +795,9 @@ export class Game {
     }
 
     if (this.mode === "paused" || this.mode === "cards" || this.mode === "armory") {
-      // Frozen: pick up pause/fullscreen keys but do not simulate.
+      // Frozen: still poll the pause key while paused so Esc/P can leave pause
+      // (cards/armory must not be resumable this way). Never simulate here.
+      if (this.mode === "paused") this.handlePauseKeys();
       return;
     }
 
@@ -786,7 +849,8 @@ export class Game {
     // Active skills 1..5
     for (let i = 0; i < 5; i++) {
       if (this.input.justPressed(`skill${i + 1}` as never)) {
-        if (this.progression.activate(i)) this.toastToPlayer("");
+        const a = this.progression.actives[i];
+        if (a && this.progression.activate(i)) this.toastToPlayer(SKILLS[a.id].name);
       }
     }
 
@@ -794,6 +858,7 @@ export class Game {
     this.enemies.update(dt * chrono);
     this.bosses.update(dt * chrono);
     this.progression.update(dt);
+    this.tickDrones(dt);
     this.director.update(dt);
     this.collisions.update(dt, player);
     this.updateParticles(dt);
@@ -825,9 +890,27 @@ export class Game {
     }
   }
 
+  /** Orbital drones: every interval each drone fires one homing shot. */
+  private tickDrones(dt: number): void {
+    const drones = this.progression.mods.drones;
+    if (drones <= 0 || !this.player.alive) {
+      this.droneTick = 0;
+      return;
+    }
+    // Capstone (level 5) promises "drones fire 50% faster".
+    const lvl = this.progression.skills.get("orbital_drones") ?? 0;
+    const interval = DRONE_SHOT_INTERVAL / (lvl >= 5 ? 1.5 : 1);
+    this.droneTick -= dt;
+    if (this.droneTick > 0) return;
+    this.droneTick = interval;
+    for (let i = 0; i < drones; i++) this.weapons.spawnDroneShot(i, drones);
+  }
+
   private handlePauseKeys(): void {
     if (this.input.justPressed("pause")) {
-      this.pause();
+      // Toggle so Esc/P also leave the pause screen (waiting on an open modal
+      // is handled by the shell, which swallows the key in the capture phase).
+      this.togglePause();
       return;
     }
     if (this.input.justPressed("mute")) {
@@ -852,7 +935,7 @@ export class Game {
       this.pendingArmory = false;
       const offer = this.progression.offerArmory();
       this.mode = "armory";
-      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls });
+      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls, skills: this.hudSkills() });
       this.emitPhase();
       return;
     }
@@ -916,8 +999,9 @@ export class Game {
     if (this.hitstopTimer > 0) scale = 0;
     else if (this.slowmoTimer > 0) scale *= this.slowmoFactor;
     // Freeze only the screens that must not simulate. The countdown still runs
-    // so the 3-2-1 actually advances.
-    if (this.mode !== "playing" && this.mode !== "countdown") scale = 0;
+    // so the 3-2-1 actually advances; paused still steps so update() can poll the
+    // pause key (it returns before any simulation), letting Esc/P resume.
+    if (this.mode !== "playing" && this.mode !== "countdown" && this.mode !== "paused") scale = 0;
     this.loop.setTimeScale(scale);
 
     // Camera shake decay
@@ -970,6 +1054,7 @@ export class Game {
       dashCooldownMax: 2,
       charge: 0,
       skills: [],
+      roster: [],
       lowHull: false,
       boss: null,
       fps: 0,
@@ -977,22 +1062,61 @@ export class Game {
     };
   }
 
-  private pushHud(): void {
-    const p = this.player;
+  /**
+   * The player's active skills in HUD shape. One source for the HUD, the armory
+   * payload and the debug API, so icon / name / bound key can never drift.
+   */
+  private hudSkills(): HudSkill[] {
     const skills: HudSkill[] = [];
-    if (this.progression) {
-      this.progression.actives.forEach((a, i) => {
-        if (!a) return;
-        skills.push({
-          slot: i,
-          id: a.id,
-          level: a.level,
-          cooldown: a.cooldown,
-          cooldownMax: a.cooldownMax,
-          ready: a.cooldown <= 0,
-        });
+    if (!this.progression) return skills;
+    this.progression.actives.forEach((a, i) => {
+      if (!a) return;
+      const def = SKILLS[a.id];
+      skills.push({
+        slot: i,
+        id: a.id,
+        name: def.name,
+        color: def.color,
+        keyLabel:
+          this.settings.keybindings[`skill${i + 1}` as ActionName]?.[0] ?? String(i + 1),
+        level: a.level,
+        cooldown: a.cooldown,
+        cooldownMax: a.cooldownMax,
+        ready: a.cooldown <= 0,
+      });
+    });
+    return skills;
+  }
+
+  /**
+   * Every owned skill (actives + passives) for the pause / settings roster.
+   * Passives carry no bound key, so their keyLabel is "".
+   */
+  private skillRoster(): SkillRosterEntry[] {
+    const roster: SkillRosterEntry[] = [];
+    if (!this.progression) return roster;
+    for (const [id, level] of this.progression.skills) {
+      const def = SKILLS[id];
+      const slot = this.progression.actives.findIndex((a) => a?.id === id);
+      const passive = slot < 0;
+      roster.push({
+        id,
+        name: def.name,
+        color: def.color,
+        category: def.category,
+        level,
+        keyLabel: passive
+          ? ""
+          : (this.settings.keybindings[`skill${slot + 1}` as ActionName]?.[0] ?? String(slot + 1)),
+        passive,
       });
     }
+    return roster;
+  }
+
+  private pushHud(): void {
+    const p = this.player;
+    const skills = this.hudSkills();
     const boss = this.bosses?.boss;
     const bd = boss?.bossDef ?? null;
     this.hudCache = {
@@ -1017,6 +1141,7 @@ export class Game {
       dashCooldownMax: 2,
       charge: this.weapons.charge,
       skills,
+      roster: this.skillRoster(),
       lowHull: p.lowHull,
       boss:
         boss && bd
@@ -1066,6 +1191,25 @@ export class Game {
 
   // ------------------------------------------------------------------ debug
 
+  private spawnEnemyAtPoint(defId: string, x: number, y: number): void {
+    const id = defId || "rock_normal_medium";
+    if (id === "raider") this.enemies.spawnShooter(x, y);
+    else if (id.startsWith("breaker")) {
+      const s = id.endsWith("large") ? "large" : id.endsWith("medium") ? "medium" : "small";
+      this.enemies.spawnSmasher(s, x, y);
+    } else {
+      const variant = id.includes("ice")
+        ? "ice"
+        : id.includes("metal")
+          ? "metal"
+          : id.includes("explosive")
+            ? "explosive"
+            : "normal";
+      const size = id.endsWith("large") ? "large" : id.endsWith("medium") ? "medium" : "small";
+      this.enemies.spawnRock(variant, size, x, y);
+    }
+  }
+
   readonly debug: DebugApi = {
     gotoStage: (n) => {
       void this.ready.then(() => {
@@ -1088,7 +1232,7 @@ export class Game {
     openArmory: () => {
       const offer = this.progression.offerArmory();
       this.mode = "armory";
-      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls });
+      this.events.emit("armory", { offers: offer.offers, rerolls: this.progression.rerolls, skills: this.hudSkills() });
       this.emitPhase();
     },
     killPlayer: () => {
@@ -1109,22 +1253,7 @@ export class Game {
       this.godMode = v;
     },
     spawnEnemy: (defId) => {
-      const id = defId || "rock_normal_medium";
-      if (id === "raider") this.enemies.spawnShooter(ARENA_W / 2, -60);
-      else if (id.startsWith("breaker")) {
-        const s = id.endsWith("large") ? "large" : id.endsWith("medium") ? "medium" : "small";
-        this.enemies.spawnSmasher(s, ARENA_W / 2, -60);
-      } else {
-        const variant = id.includes("ice")
-          ? "ice"
-          : id.includes("metal")
-            ? "metal"
-            : id.includes("explosive")
-              ? "explosive"
-              : "normal";
-        const size = id.endsWith("large") ? "large" : id.endsWith("medium") ? "medium" : "small";
-        this.enemies.spawnRock(variant, size, ARENA_W / 2, -60);
-      }
+      this.spawnEnemyAtPoint(defId, ARENA_W / 2, -60);
     },
     spawnBoss: (stage) => {
       this.bosses.spawn(stage);
@@ -1143,6 +1272,59 @@ export class Game {
     }),
     spritePng: (key) =>
       this.renderer instanceof Renderer ? this.renderer.debugTexturePng(key) : null,
+    playerState: () => ({
+      x: this.player.x,
+      y: this.player.y,
+      hull: this.player.hull,
+      hullMax: this.player.hullMax,
+      shield: this.player.shield,
+      shieldMax: this.player.shieldMax,
+      alive: this.player.alive,
+      invuln: this.player.invuln,
+    }),
+    setPlayerPos: (x, y) => {
+      this.player.x = x;
+      this.player.y = y;
+      this.player.vx = 0;
+      this.player.vy = 0;
+    },
+    arena: () => ({ w: ARENA_W, h: ARENA_H }),
+    activateSkill: (slot) => this.progression.activate(slot),
+    skillState: () =>
+      this.progression.actives.map((a, slot) => ({
+        slot,
+        id: a?.id ?? "",
+        level: a?.level ?? 0,
+        cooldown: a?.cooldown ?? 0,
+        cooldownMax: a?.cooldownMax ?? 0,
+        active: a !== null,
+      })),
+    passiveMods: () => ({ ...this.progression.mods }),
+    setSkillLevel: (id, level) => {
+      this.progression.skills.set(id as SkillId, level);
+      this.progression.recompute();
+    },
+    enemyCount: () => pools.enemies.activeCount,
+    clearEnemies: () => {
+      for (const e of pools.enemies.all()) {
+        if (e.active) pools.enemies.release(e);
+      }
+    },
+    spawnEnemyAt: (defId, x, y) => {
+      this.spawnEnemyAtPoint(defId, x, y);
+    },
+    grantSkillCard: (id) => {
+      const def = { kind: "skill", id } as CardOffer;
+      this.progression.applyCard(def);
+      this.pushHud();
+    },
+    hudSkills: () => this.hudSkills(),
+    enemyTimeScale: () => this.progression.enemyTimeScale,
+    drones: () => this.progression.mods.drones,
+    bulletCounts: () => ({
+      player: pools.bullets.activeCount,
+      enemy: pools.enemyBullets.activeCount,
+    }),
   };
 
   // ------------------------------------------------------------------ teardown
@@ -1153,6 +1335,8 @@ export class Game {
     this.loop?.stop();
     this.input.dispose();
     this.audio.musicStop();
+    window.removeEventListener("blur", this.onBlur);
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
     this.renderer?.destroy();
     this.events.clear();
   }

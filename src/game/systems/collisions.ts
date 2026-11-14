@@ -15,7 +15,10 @@ import type { Progression } from "./progression";
 import type { WeaponSystem } from "./weapons";
 
 export class CollisionSystem {
-  private grid = new SpatialHash<Enemy>(140, ARENA_W, ARENA_H);
+  // ponytail: fixed 4096 bound, not ARENA_W/H (a field initializer would snapshot
+  // the arena at construction and go stale on resize). SpatialHash clamps out-of-
+  // range coords to edge buckets, and enemies/bullets are clamped to the arena.
+  private grid = new SpatialHash<Enemy>(140, 4096, 4096);
   private found: Enemy[] = [];
 
   constructor(
@@ -273,9 +276,13 @@ export class CollisionSystem {
       if (!b.active) continue;
       b.px = b.x;
       b.py = b.y;
-      b.age += dt;
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
+      // Chrono Slip: slows bullet motion AND bullet age together so a slowed
+      // bullet does not expire at normal speed mid-effect; scale is exactly 1
+      // when inactive, so this is a no-op (x*1 is exact, no drift).
+      const bdt = dt * this.progression.enemyTimeScale;
+      b.age += bdt;
+      b.x += b.vx * bdt;
+      b.y += b.vy * bdt;
       b.angle = Math.atan2(b.vy, b.vx);
       if (
         b.age > b.lifetime ||
@@ -370,8 +377,9 @@ export class CollisionSystem {
       if (player.invulnTimer > 0 || player.dashIframe > 0) continue;
       const died = this.applyPlayerHit(player, e.damage, this.sourceName(e));
       this.ctx.burst(e.x, e.y, e.color, 14, { speed: 320, life: 0.3, size: 6 });
-      if (e.kind === "smasher" || e.kind === "rock") {
+      if (!e.isBoss && (e.kind === "smasher" || e.kind === "rock")) {
         // Rammers/rocks are consumed by the impact so they cannot multi-hit.
+        // Bosses share kind "smasher" but must survive the ram.
         this.enemies.damage(e, 999999, false, player.x, player.y);
       }
       if (died) return;
@@ -391,15 +399,19 @@ export class CollisionSystem {
   }
 
   private applyPlayerHit(player: Player, amount: number, source: string): boolean {
-    const died = player.takeDamage(amount);
-    this.ctx.stats.damageTaken += amount;
-    this.ctx.lastHitSource = source;
+    // Route the hit through the ctx gate: it is the only thing the collision
+    // system can reach that enforces debug godMode (game.ts `damagePlayer`).
+    // Calling player.takeDamage() directly bypassed that check and let enemy
+    // fire chip the hull while godMode was on.
+    const before = player.hull + player.shield;
+    this.ctx.damagePlayer(amount, source);
+    if (player.hull + player.shield === before) return false; // swallowed (godMode)
     this.ctx.sfx("hit");
     this.ctx.shake(8);
     this.ctx.burst(player.x, player.y, 0xff4d6d, 18, { speed: 380, life: 0.35, size: 7 });
     if (player.shield > 0) this.ctx.sfx("shield_hit", { volume: 0.6 });
     else if (player.shield === 0) this.ctx.sfx("shield_break", { volume: 0.6 });
-    return died;
+    return !player.alive;
   }
 
   /** Used by the debug panel / shockwave to clear the screen of bullets. */
