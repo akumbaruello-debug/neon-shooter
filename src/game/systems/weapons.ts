@@ -24,6 +24,14 @@ const BEAM_SPEED = 8000;
 const DASH_DAMAGE = 35;
 /** Crossfire barrel angles relative to aim: forward, rear, two diagonals. */
 const CROSSFIRE_OFFSETS = [0, Math.PI, 0.55, -0.55] as const;
+/** Orbital drones: how often each drone fires. 2 shots/s x 4 dmg = 8 dps (skill text). */
+export const DRONE_SHOT_INTERVAL = 0.5;
+/** Orbit radius, projectile and homing tuned to stay a modest add-on. */
+const DRONE_RADIUS = 46;
+const DRONE_DAMAGE = 4;
+const DRONE_SPEED = 380;
+const DRONE_HOMING = 6;
+const DRONE_LIFETIME = 2.2;
 
 const PROJECTILE_SHAPE: Record<WeaponId, BulletShape> = {
   focus_lance: "lance",
@@ -249,6 +257,46 @@ export class WeaponSystem {
   /** Extra damage a dash-through deals (read by collisions). */
   dashDamage(): number {
     return DASH_DAMAGE * (1 + this.ctx.player.mods.damagePct / 100);
+  }
+
+  /**
+   * One orbital-drone shot (`orbital_drones` passive). The drone sits on a ring
+   * around the player at `index/count` of a slowly-advancing orbit and fires a
+   * single homing missile toward the nearest foe. Reuses the shared bullet pool.
+   */
+  spawnDroneShot(index: number, count: number): void {
+    if (count <= 0) return;
+    const p = this.ctx.player;
+    const phase = this.ctx.runTime * 0.6;
+    const a = (index / count) * Math.PI * 2 + phase;
+    const x = p.x + Math.cos(a) * DRONE_RADIUS;
+    const y = p.y + Math.sin(a) * DRONE_RADIUS;
+
+    // Face the nearest live enemy so the missile starts curving the right way;
+    // collisions re-acquires each frame within 700px.
+    let dir = a;
+    let best = Infinity;
+    const list = pools.enemies.all();
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      if (!e || !e.active) continue;
+      const dx = e.x - x;
+      const dy = e.y - y;
+      const d = dx * dx + dy * dy;
+      if (d < best) {
+        best = d;
+        dir = Math.atan2(dy, dx);
+      }
+    }
+
+    const dmg = DRONE_DAMAGE * (1 + p.mods.damagePct / 100);
+    const b = this.emit(x, y, dir, DRONE_SPEED, 5, dmg, 0xff66cc, 0xffb3e6, DRONE_LIFETIME, "missile", 0, 0);
+    // Tag as seeker_swarm so drone shots stay out of the active weapon's
+    // in-flight caps (bounce/boomerang) and share the homing behaviour path.
+    b.weaponId = "seeker_swarm";
+    b.behavior = "homing";
+    b.homing = DRONE_HOMING;
+    b.trail = 1;
   }
 
   reset(): void {

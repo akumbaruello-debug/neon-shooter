@@ -9,6 +9,8 @@ import { FIXED_DT, MAX_STEPS_PER_FRAME } from "../data/constants";
 
 export interface LoopCallbacks {
   update: (dt: number) => void;
+  /** Runs once per update() step, even when update() returns early. */
+  afterUpdate: () => void;
   render: (alpha: number, frameDt: number) => void;
 }
 
@@ -76,6 +78,7 @@ export class GameLoop {
     let steps = 0;
     while (this.acc >= FIXED_DT && steps < MAX_STEPS_PER_FRAME) {
       this.cb.update(FIXED_DT);
+      this.cb.afterUpdate();
       this.acc -= FIXED_DT;
       steps++;
     }

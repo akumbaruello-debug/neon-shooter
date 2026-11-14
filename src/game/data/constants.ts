@@ -1,7 +1,18 @@
 /** Global tuning constants. Balance that lives in tables sits in the other data files. */
 
-export const ARENA_W = 1920;
+export let ARENA_W = 1920;
 export const ARENA_H = 1080;
+
+/**
+ * Arena follows the viewport aspect; height stays 1080 logical and the width
+ * absorbs the difference. Called by the renderer at the start of resize(),
+ * before it computes the fit scale. Never touches ARENA_H.
+ */
+export function setArenaWidth(px: number): void {
+  if (!Number.isFinite(px)) return;
+  const next = Math.max(720, Math.min(4096, Math.round(px)));
+  if (next !== ARENA_W) ARENA_W = next;
+}
 
 /** Simulation rate. Rendering interpolates between the last two steps. */
 export const FIXED_DT = 1 / 60;

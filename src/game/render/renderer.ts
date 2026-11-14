@@ -23,6 +23,7 @@ import {
   ENEMY_BULLET,
   PLAYER_RADIUS,
   SECTOR_PALETTES,
+  setArenaWidth,
 } from "../data/constants";
 import type { Bullet, DamageNumber, Enemy, Particle, Pickup, Telegraph } from "../entities";
 import type { Player } from "../player";
@@ -62,10 +63,39 @@ export interface RendererOptions {
 }
 
 type RockVariant = NonNullable<Enemy["variant"]>;
-type BulletShape7 = "lance" | "bolt" | "disc" | "blade" | "orb" | "missile" | "diamond";
+type BakedBulletShape = "lance" | "bolt" | "disc" | "blade" | "orb" | "missile" | "diamond" | "arc";
 
 const ROCK_VARIANTS: readonly RockVariant[] = ["normal", "ice", "metal", "explosive"];
-const BULLET_SHAPES: readonly BulletShape7[] = ["lance", "bolt", "disc", "blade", "orb", "missile", "diamond"];
+const BULLET_SHAPES: readonly BakedBulletShape[] = ["lance", "bolt", "disc", "blade", "orb", "missile", "diamond", "arc"];
+
+/**
+ * Per-shape visual scale-up. Bullet art bakes at 64 px against `ref = 30` and
+ * each shape paints only a fraction of that box (lance ±0.17r, bolt ±0.24r), so
+ * a raw `radius / ref` sprite is a ~1.2-1.7 px sliver on screen. This scales the
+ * SPRITE only — `b.radius` (also the collision radius) is never touched, so DPS
+ * and hitboxes are unchanged. Core width on screen = 2 * f * (32 / ref) * radius
+ * * mult * fitScale (texture half is 32 px, ref 30); at 1280x720 fitScale is
+ * 0.667, so:
+ *   lance   f .17  focus r6 -> 4.4 px, prism r5 -> 3.6 px, rail r10 -> 7.3 px
+ *   bolt    f .24  gatling/arc r4 -> 3.8 px, crossfire r5 -> 4.8 px
+ *   missile f .22 body, .48 fins  r6 -> 3.4 px body, 7.4 px fins, 15 px long
+ *   blade   f .30  boomerang r12 -> 6.7 px wide, 21 px long
+ *   disc    f .90  ricochet r9 -> 13.3 px across
+ *   orb     f .92  plasma r22 -> 28.8 px across (already large)
+ *   diamond f .62  scatter r5 -> 4.4 px
+ *   arc     1.79 wide  crescent r60 -> ~76 px sweep
+ * Quality-independent, so the same scale reads at Low (no AA/bloom) too.
+ */
+const SHAPE_SCALE: Record<BakedBulletShape, number> = {
+  lance: 3.0,
+  bolt: 2.8,
+  disc: 1.15,
+  blade: 1.3,
+  orb: 1.0,
+  missile: 1.8,
+  diamond: 1.0,
+  arc: 1.0,
+};
 const BOSS_IDS = ["warden_colossus", "razor_queen", "prism_sentinel", "void_carrier", "eclipse_sovereign"];
 const ROCK_SEEDS = 3;
 const CROSSHAIR_COLOR = 0x9ef2ff;
@@ -204,8 +234,9 @@ export class Renderer {
   private chromaAmt = 0;
   private chromaOn = false;
   private time = 0;
-  private aimX = ARENA_W / 2;
-  private aimY = ARENA_H / 2;
+  // Not seeded from ARENA_W/H: the arena is a live binding resized per viewport.
+  private aimX = 0;
+  private aimY = 0;
   private haveAim = false;
   private readonly onPointerMove: (e: PointerEvent) => void;
   private destroyed = false;
@@ -233,25 +264,30 @@ export class Renderer {
     const pickupLayer = new Container();
     const thrusterLayer = new Container();
     const playerLayer = new Container();
+    const trailLayer = new Container();
     const playerBulletLayer = new Container();
     const enemyBulletLayer = new Container();
     const particleLayer = this.particles.container;
     const crosshairLayer = new Container();
+    // Bottom -> top. Enemy bullets + telegraphs render above every player FX
+    // (fairness): particle explosions and damage numbers must not wash them out.
     this.world.addChild(
-      telegraphLayer,
       enemyLayer,
       pickupLayer,
       thrusterLayer,
       playerLayer,
+      trailLayer,
       playerBulletLayer,
-      enemyBulletLayer,
-      this.dmgLayer,
       particleLayer,
+      this.dmgLayer,
+      telegraphLayer,
+      enemyBulletLayer,
       crosshairLayer,
     );
     playerBulletLayer.blendMode = "add";
+    trailLayer.blendMode = "add";
 
-    for (const layer of [telegraphLayer, enemyLayer, pickupLayer, thrusterLayer, playerLayer, playerBulletLayer, enemyBulletLayer, this.dmgLayer, crosshairLayer]) {
+    for (const layer of [enemyLayer, pickupLayer, thrusterLayer, playerLayer, trailLayer, playerBulletLayer, this.dmgLayer, telegraphLayer, enemyBulletLayer, crosshairLayer]) {
       layer.eventMode = "none";
     }
 
@@ -261,6 +297,7 @@ export class Renderer {
     this.pools.thruster = new SpritePool(thrusterLayer);
     this.pools.player = new SpritePool(playerLayer);
     this.pools.playerBullet = new SpritePool(playerBulletLayer);
+    this.pools.trail = new SpritePool(trailLayer);
     this.pools.enemyBullet = new SpritePool(enemyBulletLayer);
     this.pools.crosshair = new SpritePool(crosshairLayer);
 
@@ -385,6 +422,9 @@ export class Renderer {
   resize(): void {
     const w = Math.max(1, this.host.clientWidth || window.innerWidth);
     const h = Math.max(1, this.host.clientHeight || window.innerHeight);
+    // Arena follows the viewport aspect (height stays ARENA_H); called before
+    // the fit scale so ARENA_W * scale === w and the letterbox collapses to ~0.
+    setArenaWidth(ARENA_H * (w / h));
     this.vw = w;
     this.vh = h;
     this.app.renderer.resize(w, h);
@@ -421,6 +461,7 @@ export class Renderer {
     this.drawPickups(world.pickups, a);
     this.drawPlayer(world.player, world.time);
     this.drawBullets(world.bullets, a, "playerBullet");
+    this.drawTrails(world.bullets, a);
     this.drawBullets(world.enemyBullets, a, "enemyBullet");
     this.drawDamage(world.damageNumbers);
     this.particles.render(world.particles, dt);
@@ -676,19 +717,23 @@ export class Renderer {
       const pos = this.interp(b, b.x, b.y, alpha, b.px, b.py);
       let key: string;
       let tint = 0xffffff;
+      let vis = 1;
       if (enemy) {
         key = this.highContrast ? "eb:1" : "eb:0";
       } else {
-        key = `pb:${this.bulletShape(b)}`;
+        const shape = this.bulletShape(b);
+        key = `pb:${shape}`;
         tint = b.color;
+        vis = SHAPE_SCALE[shape];
       }
       const rdp = this.reg(key);
       const s = pool.acquire(key, rdp.tex);
       s.position.set(pos.x, pos.y);
-      s.rotation = b.angle;
+      // Bullet art is authored nose-up (-Y); rotate it onto the travel vector.
+      s.rotation = b.angle + Math.PI / 2;
       s.tint = tint;
       s.blendMode = "normal";
-      const sc = (b.radius / rdp.ref) * (b.crit ? 1.2 : 1);
+      const sc = (b.radius / rdp.ref) * vis * (b.crit ? 1.2 : 1);
       s.scale.set(sc);
       const rem = b.lifetime - b.age;
       s.alpha = rem < 0.25 ? Math.max(0, rem * 4) : 1;
@@ -697,7 +742,36 @@ export class Renderer {
     pool.end();
   }
 
-  private bulletShape(b: Bullet): BulletShape7 {
+  /**
+   * Streaks for shots that set `b.trail` (rail charge, prism beam, seeker
+   * missiles). One pooled additive glow sprite per bullet, stretched to ~5x the
+   * bullet's visual size and parked behind the nose, so fast shots read as a
+   * continuous beam instead of a dot. Reuses the existing `glow` texture and the
+   * standard SpritePool free-list: no new texture, no per-frame allocation. Cost
+   * is one extra Sprite + draw per live trail bullet (about 1-3 in practice), on
+   * its own additive layer — behind the bullet core, and independent of quality.
+   */
+  private drawTrails(list: readonly Bullet[], alpha: number): void {
+    const pool = this.pools.trail!;
+    pool.begin();
+    for (const b of list) {
+      if (!b.active || !b.trail) continue;
+      const pos = this.interp(b, b.x, b.y, alpha, b.px, b.py);
+      const base = b.radius * SHAPE_SCALE[this.bulletShape(b)];
+      const len = base * 5;
+      const s = pool.acquire("glow", this.reg("glow").tex);
+      s.tint = b.color;
+      const rem = b.lifetime - b.age;
+      s.alpha = 0.34 * (rem < 0.25 ? Math.max(0, rem * 4) : 1);
+      s.rotation = b.angle; // long axis (local +X) runs along travel
+      s.width = len;
+      s.height = Math.max(2, base * 1.5);
+      s.position.set(pos.x - Math.cos(b.angle) * len * 0.42, pos.y - Math.sin(b.angle) * len * 0.42);
+    }
+    pool.end();
+  }
+
+  private bulletShape(b: Bullet): BakedBulletShape {
     switch (b.shape) {
       case "lance":
       case "bolt":
@@ -706,11 +780,10 @@ export class Renderer {
       case "orb":
       case "missile":
       case "diamond":
+      case "arc":
         return b.shape;
       case "beam":
         return "lance";
-      case "arc":
-        return "bolt";
       case "enemy":
       default:
         return "orb";
@@ -804,8 +877,13 @@ export class Renderer {
  * so the shell can swap one for the other without branching at every call site.
  */
 export class NullRenderer {
-  readonly width = ARENA_W;
-  readonly height = ARENA_H;
+  get width(): number {
+    return ARENA_W;
+  }
+
+  get height(): number {
+    return ARENA_H;
+  }
 
   static async create(_host: HTMLElement, _opts: RendererOptions): Promise<NullRenderer> {
     return new NullRenderer();

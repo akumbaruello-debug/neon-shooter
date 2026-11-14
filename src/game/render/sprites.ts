@@ -944,7 +944,7 @@ export function makeBossSprite(id: string, size: number): Canvas {
 
 // ----------------------------------------------------------------- bullets
 
-export function makeBullet(shape: "lance" | "bolt" | "disc" | "blade" | "orb" | "missile" | "diamond", color: number, size: number): Canvas {
+export function makeBullet(shape: "lance" | "bolt" | "disc" | "blade" | "orb" | "missile" | "diamond" | "arc", color: number, size: number): Canvas {
   const S = Math.max(6, Math.round(size));
   const { canvas, ctx } = surface(S, S);
   const h = S / 2;
@@ -1067,6 +1067,29 @@ export function makeBullet(shape: "lance" | "bolt" | "disc" | "blade" | "orb" | 
       ctx.lineTo(r * 0.62, 0);
       ctx.lineWidth = Math.max(1, r * 0.05);
       ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      ctx.stroke();
+      break;
+    }
+    case "arc": {
+      // Crescent slash: a thick band bulging toward -Y (sprite forward) so it
+      // reads as a sweeping cut when rotated onto the travel vector.
+      const R = r * 0.92;
+      const cy = r * 0.5;
+      ctx.beginPath();
+      ctx.arc(0, cy, R, Math.PI * 1.06, Math.PI * 1.94);
+      ctx.lineWidth = r * 0.34;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = lineGrad(ctx, -R, 0, R, 0, [
+        [0, css(color)],
+        [0.5, css(lighten(color, 0.7))],
+        [1, css(color)],
+      ]);
+      ctx.stroke();
+      glowOff(ctx);
+      ctx.beginPath();
+      ctx.arc(0, cy, R, Math.PI * 1.14, Math.PI * 1.86);
+      ctx.lineWidth = Math.max(1, r * 0.12);
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
       ctx.stroke();
       break;
     }

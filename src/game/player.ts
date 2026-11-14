@@ -69,9 +69,23 @@ export function baseMods(): Mods {
   };
 }
 
+/**
+ * Player-ship visual half-extents in sprite source pixels, read off the
+ * "Aegis" art in render/sprites.ts (drawAegis): the nose vertex is at y = -46,
+ * the engine nozzles reach y = +41, and the swept wingtips reach x = ±43 (so
+ * the wingtip, not the ±11 fuselage, is the widest point).
+ * renderer.ts registers the ship texture with ref = 42 and scales it by
+ * shipScale = PLAYER_RADIUS / 42, so 1 source px = PLAYER_RADIUS / 42 arena px:
+ *   half width  = 43 * PLAYER_RADIUS / 42  (~26.6 arena px at PLAYER_RADIUS 26)
+ *   half length = 46 * PLAYER_RADIUS / 42  (~28.5) — nose dominates tail (41).
+ */
+const SHIP_SRC_HALF_W = 43;
+const SHIP_SRC_HALF_FWD = 46;
+const SHIP_SRC_REF = 42;
+
 export class Player {
-  x = ARENA_W / 2;
-  y = ARENA_H * 0.78;
+  x = 0;
+  y = 0;
   vx = 0;
   vy = 0;
   angle = -Math.PI / 2;
@@ -250,21 +264,31 @@ export class Player {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
 
-    // Soft edge bounce so the ship stays inside the arena.
-    const r = this.radius * 0.8;
+    // Soft edge bounce so the ship stays inside the arena. Clamp against the
+    // rotated AABB of the sprite (not a single radius) so the long axis and the
+    // wingtips are both respected as the ship turns.
+    // ponytail: symmetric front/back — nose (46) and tail (41) source px collapse
+    // to max (46). Go asymmetric only if the tail gap ever matters visually.
+    const s = PLAYER_RADIUS / SHIP_SRC_REF;
+    const halfW = SHIP_SRC_HALF_W * s;
+    const halfFwd = SHIP_SRC_HALF_FWD * s;
+    const sa = Math.abs(Math.sin(this.angle));
+    const ca = Math.abs(Math.cos(this.angle));
+    const xr = halfW * ca + halfFwd * sa;
+    const yr = halfW * sa + halfFwd * ca;
     const bounce = 0.45;
-    if (this.x < r) {
-      this.x = r;
+    if (this.x < xr) {
+      this.x = xr;
       this.vx = Math.abs(this.vx) * bounce;
-    } else if (this.x > ARENA_W - r) {
-      this.x = ARENA_W - r;
+    } else if (this.x > ARENA_W - xr) {
+      this.x = ARENA_W - xr;
       this.vx = -Math.abs(this.vx) * bounce;
     }
-    if (this.y < r) {
-      this.y = r;
+    if (this.y < yr) {
+      this.y = yr;
       this.vy = Math.abs(this.vy) * bounce;
-    } else if (this.y > ARENA_H - r) {
-      this.y = ARENA_H - r;
+    } else if (this.y > ARENA_H - yr) {
+      this.y = ARENA_H - yr;
       this.vy = -Math.abs(this.vy) * bounce;
     }
 
