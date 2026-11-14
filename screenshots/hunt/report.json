@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "url": "http://localhost:3123/?autostart=1&new=1&debug=1",
+    "fps": 4,
+    "simRate": 0.3333333333333333,
+    "startedIso": "2026-11-14T07:16:33.112Z",
+    "mode": "reverify",
+    "endedIso": "2026-11-14T07:19:02.756Z",
+    "durationSec": 207
+  },
+  "sections": {
+    "reverify": {
+      "checks": [
+        {
+          "id": "esc",
+          "pass": true,
+          "detail": "playing→Esc→paused; Esc→playing",
+          "escPaused": "paused",
+          "escPlaying": "playing",
+          "severity": "cosmetic"
+        },
+        {
+          "id": "blur",
+          "pass": true,
+          "detail": "blur→paused; resume→playing; visibilitychange(hidden)→paused",
+          "blurPhase": "paused",
+          "afterBlurResume": "playing",
+          "visPhase": "paused",
+          "severity": "fairness"
+        },
+        {
+          "id": "boss_ram_off",
+          "pass": true,
+          "detail": "hull+shield 140.0→112.2 (drop 27.8), enemies=1, phase=playing, alive=true",
+          "before": {
+            "hull": 100,
+            "shield": 40,
+            "hullMax": 100,
+            "shieldMax": 40
+          },
+          "after": {
+            "hull": 100,
+            "shield": 12.160000000000004
+          },
+          "window": {
+            "simSeconds": 2.5,
+            "simRate": 0.3333333333333333
+          },
+          "enemies": 1,
+          "phase": "playing",
+          "severity": "breaks-gameplay"
+        },
+        {
+          "id": "boss_ram_on",
+          "pass": true,
+          "detail": "hull+shield 140.0→140.0 (delta 0.00), enemies=1, phase=playing",
+          "before": {
+            "hull": 100,
+            "shield": 40
+          },
+          "after": {
+            "hull": 100,
+            "shield": 40
+          },
+          "window": {
+            "simSeconds": 2.5,
+            "simRate": 0.3333333333333333
+          },
+          "enemies": 1,
+          "phase": "playing",
+          "severity": "fairness"
+        },
+        {
+          "id": "cards",
+          "pass": true,
+          "detail": "cards rendered, key 1 picks, back to playing"
+        },
+        {
+          "id": "armory",
+          "pass": true,
+          "detail": "armory rendered, closed back to playing"
+        },
+        {
+          "id": "pause_settings",
+          "pass": true,
+          "detail": "pause+settings rendered, resumed"
+        },
+        {
+          "id": "gameover",
+          "pass": true,
+          "detail": "game-over overlay + Retry restarts"
+        }
+      ]
+    }
+  },
+  "anomalies": [],
+  "clean": [
+    "esc: playing→Esc→paused; Esc→playing",
+    "blur: blur→paused; resume→playing; visibilitychange(hidden)→paused",
+    "boss_ram_off: hull+shield 140.0→112.2 (drop 27.8), enemies=1, phase=playing, alive=true",
+    "boss_ram_on: hull+shield 140.0→140.0 (delta 0.00), enemies=1, phase=playing",
+    "cards: cards rendered, key 1 picks, back to playing",
+    "armory: armory rendered, closed back to playing",
+    "pause_settings: pause+settings rendered, resumed",
+    "gameover: game-over overlay + Retry restarts"
+  ],
+  "consoleErrors": []
+}

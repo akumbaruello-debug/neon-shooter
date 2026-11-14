@@ -1,0 +1,215 @@
+{
+  "viewports": {
+    "1280x720": {
+      "arena": {
+        "w": 1920,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1280,
+        "h": 720
+      },
+      "scale": 0.6666666666666666,
+      "edges": {
+        "left": {
+          "x": 20.8,
+          "y": 540,
+          "alive": true
+        },
+        "right": {
+          "x": 1899.2,
+          "y": 540,
+          "alive": true
+        },
+        "top": {
+          "x": 960,
+          "y": 20.8,
+          "alive": true
+        },
+        "bottom": {
+          "x": 960,
+          "y": 1059.2,
+          "alive": true
+        }
+      }
+    },
+    "1920x1080": {
+      "arena": {
+        "w": 1920,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1920,
+        "h": 1080
+      },
+      "scale": 1,
+      "edges": {
+        "left": {
+          "x": 20.8,
+          "y": 540,
+          "alive": true
+        },
+        "right": {
+          "x": 1899.2,
+          "y": 540,
+          "alive": true
+        },
+        "top": {
+          "x": 960,
+          "y": 20.8,
+          "alive": true
+        },
+        "bottom": {
+          "x": 960,
+          "y": 1059.2,
+          "alive": true
+        }
+      }
+    },
+    "1024x768": {
+      "arena": {
+        "w": 1920,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1024,
+        "h": 768
+      },
+      "scale": 0.5333333333333333,
+      "edges": {
+        "left": {
+          "x": 20.8,
+          "y": 540,
+          "alive": true
+        },
+        "right": {
+          "x": 1899.2,
+          "y": 540,
+          "alive": true
+        },
+        "top": {
+          "x": 960,
+          "y": 20.8,
+          "alive": true
+        },
+        "bottom": {
+          "x": 960,
+          "y": 1059.2,
+          "alive": true
+        }
+      }
+    }
+  },
+  "skills": {
+    "granted": [
+      "shockwave",
+      "nano_repair",
+      "phase_barrier",
+      "missile_barrage",
+      "overdrive"
+    ],
+    "before": [
+      {
+        "slot": 0,
+        "id": "shockwave",
+        "level": 1,
+        "cooldown": 0,
+        "cooldownMax": 9,
+        "active": true
+      },
+      {
+        "slot": 1,
+        "id": "nano_repair",
+        "level": 1,
+        "cooldown": 0,
+        "cooldownMax": 16,
+        "active": true
+      },
+      {
+        "slot": 2,
+        "id": "phase_barrier",
+        "level": 1,
+        "cooldown": 0,
+        "cooldownMax": 18,
+        "active": true
+      },
+      {
+        "slot": 3,
+        "id": "missile_barrage",
+        "level": 1,
+        "cooldown": 0,
+        "cooldownMax": 12,
+        "active": true
+      },
+      {
+        "slot": 4,
+        "id": "overdrive",
+        "level": 1,
+        "cooldown": 0,
+        "cooldownMax": 22,
+        "active": true
+      }
+    ],
+    "keyResults": [
+      {
+        "slot": 0,
+        "key": "1",
+        "id": "shockwave",
+        "cooldownAfterKey": 0,
+        "cooldownMax": 9,
+        "fired": false
+      },
+      {
+        "slot": 1,
+        "key": "2",
+        "id": "nano_repair",
+        "cooldownAfterKey": 0,
+        "cooldownMax": 16,
+        "fired": false
+      },
+      {
+        "slot": 2,
+        "key": "3",
+        "id": "phase_barrier",
+        "cooldownAfterKey": 0,
+        "cooldownMax": 18,
+        "fired": false
+      },
+      {
+        "slot": 3,
+        "key": "4",
+        "id": "missile_barrage",
+        "cooldownAfterKey": 0,
+        "cooldownMax": 12,
+        "fired": false
+      },
+      {
+        "slot": 4,
+        "key": "5",
+        "id": "overdrive",
+        "cooldownAfterKey": 0,
+        "cooldownMax": 22,
+        "fired": false
+      }
+    ],
+    "directActivate": {
+      "ok": true,
+      "cooldown": 9
+    }
+  },
+  "weapons": [
+    "focus_lance",
+    "gatling_vulcan",
+    "rail_charge",
+    "prism_beam",
+    "scatter_shot",
+    "crescent_slash",
+    "arc_chain",
+    "plasma_orb",
+    "seeker_swarm",
+    "ricochet_disc",
+    "boomerang_blade",
+    "crossfire"
+  ],
+  "errors": []
+}

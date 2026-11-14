@@ -1,0 +1,652 @@
+{
+  "generatedAt": "2026-11-14T06:35:54.755Z",
+  "base": "http://localhost:3123",
+  "runUrl": "/?autostart=1&new=1&debug=1",
+  "missingApi": [],
+  "actives": [
+    {
+      "id": "shockwave",
+      "kind": "active",
+      "slot": 0,
+      "key": "1",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "shockwave",
+        "cooldownAfterKey": 8.83,
+        "cooldownMax": 9,
+        "enemiesBefore": 24,
+        "enemiesAfter": 0
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=8.83"
+        },
+        {
+          "name": "enemies die (aoe)",
+          "pass": true,
+          "detail": "drop=24"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "nano_repair",
+      "kind": "active",
+      "slot": 1,
+      "key": "2",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "nano_repair",
+        "damage": {
+          "hullBefore": 86,
+          "damaged": true
+        },
+        "cooldownAfterKey": 15.75,
+        "cooldownMax": 16,
+        "hullBefore": 86,
+        "hullAfter": 88.5
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=15.75"
+        },
+        {
+          "name": "hull rises",
+          "pass": true,
+          "detail": "86.0 -> 88.5 (damaged=true)"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "phase_barrier",
+      "kind": "active",
+      "slot": 2,
+      "key": "3",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "phase_barrier",
+        "invulnBefore": false,
+        "cooldownAfterKey": 17.75,
+        "cooldownMax": 18,
+        "invulnAfter": true
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=17.75"
+        },
+        {
+          "name": "invuln true",
+          "pass": true,
+          "detail": "invuln=true"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "missile_barrage",
+      "kind": "active",
+      "slot": 3,
+      "key": "4",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "missile_barrage",
+        "bulletsBefore": 0,
+        "entitiesBefore": 0,
+        "cooldownAfterKey": 11.75,
+        "cooldownMax": 12,
+        "bulletsAfter": 6
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=11.75"
+        },
+        {
+          "name": "player bullets jump",
+          "pass": true,
+          "detail": "0 -> 6"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "overdrive",
+      "kind": "active",
+      "slot": 4,
+      "key": "5",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "overdrive",
+        "modsBefore": {
+          "maxHullFlat": 0,
+          "damagePct": 0,
+          "fireRatePct": 0,
+          "critChance": 0.02,
+          "critDamage": 1.5,
+          "pierceFlat": 0,
+          "moveSpeedPct": 0,
+          "pickupRadiusPct": 0,
+          "xpPct": 0,
+          "shieldFlat": 0,
+          "shieldRechargePct": 0,
+          "thornsDamage": 0,
+          "drones": 0,
+          "damageReduction": 0,
+          "lifesteal": 0,
+          "novaOnLevelup": false,
+          "revive": false,
+          "barrierReflect": false
+        },
+        "cooldownAfterKey": 21.75,
+        "cooldownMax": 22,
+        "modsAfter": {
+          "maxHullFlat": 0,
+          "damagePct": 0,
+          "fireRatePct": 30,
+          "critChance": 0.02,
+          "critDamage": 1.5,
+          "pierceFlat": 0,
+          "moveSpeedPct": 10,
+          "pickupRadiusPct": 0,
+          "xpPct": 0,
+          "shieldFlat": 0,
+          "shieldRechargePct": 0,
+          "thornsDamage": 0,
+          "drones": 0,
+          "damageReduction": 0,
+          "lifesteal": 0,
+          "novaOnLevelup": false,
+          "revive": false,
+          "barrierReflect": false
+        }
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=21.75"
+        },
+        {
+          "name": "fireRate bump",
+          "pass": true,
+          "detail": "+30"
+        },
+        {
+          "name": "moveSpeed bump",
+          "pass": true,
+          "detail": "+10"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "gravity_well",
+      "kind": "active",
+      "slot": 0,
+      "key": "1",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "gravity_well",
+        "cooldownAfterKey": 14.75,
+        "cooldownMax": 15,
+        "enemiesBefore": 24,
+        "enemiesAfter": 0
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=14.75"
+        },
+        {
+          "name": "enemies die (aoe)",
+          "pass": true,
+          "detail": "drop=24"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "chrono_slip",
+      "kind": "active",
+      "slot": 1,
+      "key": "2",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "chrono_slip",
+        "enemyTSBefore": 1,
+        "cooldownAfterKey": 19.75,
+        "cooldownMax": 20,
+        "enemyTSAfter": 0.45
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=19.75"
+        },
+        {
+          "name": "enemy time slowed",
+          "pass": true,
+          "detail": "enemyTimeScale=0.45"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "id": "ion_storm",
+      "kind": "active",
+      "slot": 2,
+      "key": "3",
+      "pass": true,
+      "evidence": {
+        "grantedSlot": "ion_storm",
+        "cooldownAfterKey": 24.67,
+        "cooldownMax": 25,
+        "enemiesBefore": 24,
+        "enemiesAfter": 8
+      },
+      "checks": [
+        {
+          "name": "key activates slot",
+          "pass": true,
+          "detail": "cooldown=24.67"
+        },
+        {
+          "name": "ion strikes kill",
+          "pass": true,
+          "detail": "drop=16"
+        }
+      ],
+      "failures": []
+    }
+  ],
+  "passives": [
+    {
+      "id": "reinforced_hull",
+      "kind": "passive",
+      "effect": "max_hull_flat",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 maxHullFlat",
+          "pass": true,
+          "detail": "expected 95, got 95"
+        },
+        {
+          "name": "L5 damageReduction",
+          "pass": true,
+          "detail": "expected 0.15, got 0.15"
+        },
+        {
+          "name": "L1 maxHullFlat",
+          "pass": true,
+          "detail": "expected 15, got 15"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "maxHullFlat": 95,
+          "damageReduction": 0.15
+        },
+        "expectedLevel1": {
+          "maxHullFlat": 15
+        },
+        "actualLevel5Delta": {
+          "maxHullFlat": 95,
+          "damageReduction": 0.15
+        },
+        "actualLevel1Delta": {
+          "maxHullFlat": 15
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "overcharged_rounds",
+      "kind": "passive",
+      "effect": "damage_pct",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 damagePct",
+          "pass": true,
+          "detail": "expected 46, got 46"
+        },
+        {
+          "name": "L1 damagePct",
+          "pass": true,
+          "detail": "expected 8, got 8"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "damagePct": 46
+        },
+        "expectedLevel1": {
+          "damagePct": 8
+        },
+        "actualLevel5Delta": {
+          "damagePct": 46
+        },
+        "actualLevel1Delta": {
+          "damagePct": 8
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "rapid_loader",
+      "kind": "passive",
+      "effect": "fire_rate_pct",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 fireRatePct",
+          "pass": true,
+          "detail": "expected 42, got 42"
+        },
+        {
+          "name": "L1 fireRatePct",
+          "pass": true,
+          "detail": "expected 7, got 7"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "fireRatePct": 42
+        },
+        "expectedLevel1": {
+          "fireRatePct": 7
+        },
+        "actualLevel5Delta": {
+          "fireRatePct": 42
+        },
+        "actualLevel1Delta": {
+          "fireRatePct": 7
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "crit_core",
+      "kind": "passive",
+      "effect": "crit",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 critChance",
+          "pass": true,
+          "detail": "expected 0.3, got 0.3"
+        },
+        {
+          "name": "L5 critDamage",
+          "pass": true,
+          "detail": "expected 0.4, got 0.4"
+        },
+        {
+          "name": "L1 critChance",
+          "pass": true,
+          "detail": "expected 0.05, got 0.05"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "critChance": 0.3,
+          "critDamage": 0.4
+        },
+        "expectedLevel1": {
+          "critChance": 0.05
+        },
+        "actualLevel5Delta": {
+          "critChance": 0.3,
+          "critDamage": 0.4
+        },
+        "actualLevel1Delta": {
+          "critChance": 0.05
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "tungsten_tips",
+      "kind": "passive",
+      "effect": "pierce_flat",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 pierceFlat",
+          "pass": true,
+          "detail": "expected 6, got 6"
+        },
+        {
+          "name": "L1 pierceFlat",
+          "pass": true,
+          "detail": "expected 1, got 1"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "pierceFlat": 6
+        },
+        "expectedLevel1": {
+          "pierceFlat": 1
+        },
+        "actualLevel5Delta": {
+          "pierceFlat": 6
+        },
+        "actualLevel1Delta": {
+          "pierceFlat": 1
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "thrusters",
+      "kind": "passive",
+      "effect": "move_speed_pct",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 moveSpeedPct",
+          "pass": true,
+          "detail": "expected 36, got 36"
+        },
+        {
+          "name": "L1 moveSpeedPct",
+          "pass": true,
+          "detail": "expected 6, got 6"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "moveSpeedPct": 36
+        },
+        "expectedLevel1": {
+          "moveSpeedPct": 6
+        },
+        "actualLevel5Delta": {
+          "moveSpeedPct": 36
+        },
+        "actualLevel1Delta": {
+          "moveSpeedPct": 6
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "magnet_coil",
+      "kind": "passive",
+      "effect": "pickup_radius_pct",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 pickupRadiusPct",
+          "pass": true,
+          "detail": "expected 125, got 125"
+        },
+        {
+          "name": "L5 xpPct",
+          "pass": true,
+          "detail": "expected 50, got 50"
+        },
+        {
+          "name": "L1 pickupRadiusPct",
+          "pass": true,
+          "detail": "expected 25, got 25"
+        },
+        {
+          "name": "L1 xpPct",
+          "pass": true,
+          "detail": "expected 10, got 10"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "pickupRadiusPct": 125,
+          "xpPct": 50
+        },
+        "expectedLevel1": {
+          "pickupRadiusPct": 25,
+          "xpPct": 10
+        },
+        "actualLevel5Delta": {
+          "pickupRadiusPct": 125,
+          "xpPct": 50
+        },
+        "actualLevel1Delta": {
+          "pickupRadiusPct": 25,
+          "xpPct": 10
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "shield_matrix",
+      "kind": "passive",
+      "effect": "shield_flat",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 shieldFlat",
+          "pass": true,
+          "detail": "expected 60, got 60"
+        },
+        {
+          "name": "L1 shieldFlat",
+          "pass": true,
+          "detail": "expected 10, got 10"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "shieldFlat": 60
+        },
+        "expectedLevel1": {
+          "shieldFlat": 10
+        },
+        "actualLevel5Delta": {
+          "shieldFlat": 60
+        },
+        "actualLevel1Delta": {
+          "shieldFlat": 10
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "thorn_plating",
+      "kind": "passive",
+      "effect": "thorns",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 thornsDamage",
+          "pass": true,
+          "detail": "expected 85, got 85"
+        },
+        {
+          "name": "L1 thornsDamage",
+          "pass": true,
+          "detail": "expected 12, got 12"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "thornsDamage": 85
+        },
+        "expectedLevel1": {
+          "thornsDamage": 12
+        },
+        "actualLevel5Delta": {
+          "thornsDamage": 85
+        },
+        "actualLevel1Delta": {
+          "thornsDamage": 12
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "orbital_drones",
+      "kind": "passive",
+      "effect": "drones",
+      "pass": true,
+      "checks": [
+        {
+          "name": "L5 drones",
+          "pass": true,
+          "detail": "expected 3, got 3"
+        },
+        {
+          "name": "L1 drones",
+          "pass": true,
+          "detail": "expected 1, got 1"
+        },
+        {
+          "name": "drones fire (consumed by game)",
+          "pass": true,
+          "detail": "playerBullets 1 -> 10, enemies 0 -> 1, drones()=3"
+        }
+      ],
+      "evidence": {
+        "expectedLevel5": {
+          "drones": 3
+        },
+        "expectedLevel1": {
+          "drones": 1
+        },
+        "actualLevel5Delta": {
+          "drones": 3
+        },
+        "actualLevel1Delta": {
+          "drones": 1
+        },
+        "dronesApi": 3,
+        "playerBullets": {
+          "before": 1,
+          "after": 10
+        },
+        "enemies": {
+          "before": 0,
+          "after": 1
+        }
+      },
+      "failures": []
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "total": 18,
+    "passed": 18,
+    "failed": 0
+  }
+}

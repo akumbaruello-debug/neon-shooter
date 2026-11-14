@@ -1,0 +1,918 @@
+{
+  "generatedAt": "2026-11-14T06:37:37.899Z",
+  "base": "http://localhost:3123",
+  "runUrl": "/?autostart=1&new=1&debug=1",
+  "viewports": {
+    "1280x720": {
+      "viewport": "1280x720",
+      "vw": 1280,
+      "vh": 720,
+      "arena": {
+        "w": 1920,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1280,
+        "h": 720
+      },
+      "expectedArenaW": 1920,
+      "phase": "playing",
+      "sides": [
+        {
+          "side": "left",
+          "arenaPos": {
+            "x": 38.95,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 25.97,
+            "y": 360
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 25.97,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.6667,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(25.97,360) canvas=1280x720"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(38.95,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "right",
+          "arenaPos": {
+            "x": 1881.03,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 1254.02,
+            "y": 360
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 25.98,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.6667,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(1254.02,360) canvas=1280x720"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(1881.03,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "top",
+          "arenaPos": {
+            "x": 960,
+            "y": 38.79
+          },
+          "screenPos": {
+            "x": 640,
+            "y": 25.86
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 25.86,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.6667,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(640,25.86) canvas=1280x720"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(960,38.79)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "bottom",
+          "arenaPos": {
+            "x": 960,
+            "y": 1041.02
+          },
+          "screenPos": {
+            "x": 640,
+            "y": 694.01
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 25.99,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.6667,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(640,694.01) canvas=1280x720"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(960,1041.02)"
+            }
+          ],
+          "failures": []
+        }
+      ],
+      "globalChecks": [
+        {
+          "name": "arena.h === 1080",
+          "pass": true,
+          "detail": "h=1080"
+        },
+        {
+          "name": "arena.w follows aspect",
+          "pass": true,
+          "detail": "expected ~1920, got 1920"
+        }
+      ],
+      "pass": true
+    },
+    "1920x1080": {
+      "viewport": "1920x1080",
+      "vw": 1920,
+      "vh": 1080,
+      "arena": {
+        "w": 1920,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1920,
+        "h": 1080
+      },
+      "expectedArenaW": 1920,
+      "phase": "playing",
+      "sides": [
+        {
+          "side": "left",
+          "arenaPos": {
+            "x": 38.87,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 38.87,
+            "y": 540
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 38.87,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 1,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(38.87,540) canvas=1920x1080"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(38.87,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "right",
+          "arenaPos": {
+            "x": 1881.03,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 1881.03,
+            "y": 540
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 38.97,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 1,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(1881.03,540) canvas=1920x1080"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(1881.03,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "top",
+          "arenaPos": {
+            "x": 960,
+            "y": 38.79
+          },
+          "screenPos": {
+            "x": 960,
+            "y": 38.79
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 38.79,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 1,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(960,38.79) canvas=1920x1080"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(960,38.79)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "bottom",
+          "arenaPos": {
+            "x": 960,
+            "y": 1041.02
+          },
+          "screenPos": {
+            "x": 960,
+            "y": 1041.02
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 38.98,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 1,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(960,1041.02) canvas=1920x1080"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(960,1041.02)"
+            }
+          ],
+          "failures": []
+        }
+      ],
+      "globalChecks": [
+        {
+          "name": "arena.h === 1080",
+          "pass": true,
+          "detail": "h=1080"
+        },
+        {
+          "name": "arena.w follows aspect",
+          "pass": true,
+          "detail": "expected ~1920, got 1920"
+        }
+      ],
+      "pass": true
+    },
+    "1024x768": {
+      "viewport": "1024x768",
+      "vw": 1024,
+      "vh": 768,
+      "arena": {
+        "w": 1440,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1024,
+        "h": 768
+      },
+      "expectedArenaW": 1440,
+      "phase": "playing",
+      "sides": [
+        {
+          "side": "left",
+          "arenaPos": {
+            "x": 38.87,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 27.64,
+            "y": 384
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 27.64,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.7111,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(27.64,384) canvas=1024x768"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(38.87,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "right",
+          "arenaPos": {
+            "x": 1401.03,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 996.29,
+            "y": 384
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 27.71,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.7111,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(996.29,384) canvas=1024x768"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(1401.03,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "top",
+          "arenaPos": {
+            "x": 720,
+            "y": 38.98
+          },
+          "screenPos": {
+            "x": 512,
+            "y": 27.72
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 27.72,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.7111,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(512,27.72) canvas=1024x768"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(720,38.98)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "bottom",
+          "arenaPos": {
+            "x": 720,
+            "y": 1041.25
+          },
+          "screenPos": {
+            "x": 512,
+            "y": 740.44
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 27.56,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.7111,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(512,740.44) canvas=1024x768"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(720,1041.25)"
+            }
+          ],
+          "failures": []
+        }
+      ],
+      "globalChecks": [
+        {
+          "name": "arena.h === 1080",
+          "pass": true,
+          "detail": "h=1080"
+        },
+        {
+          "name": "arena.w follows aspect",
+          "pass": true,
+          "detail": "expected ~1440, got 1440"
+        }
+      ],
+      "pass": true
+    },
+    "1440x900": {
+      "viewport": "1440x900",
+      "vw": 1440,
+      "vh": 900,
+      "arena": {
+        "w": 1728,
+        "h": 1080
+      },
+      "canvas": {
+        "w": 1440,
+        "h": 900
+      },
+      "expectedArenaW": 1728,
+      "phase": "playing",
+      "sides": [
+        {
+          "side": "left",
+          "arenaPos": {
+            "x": 38.95,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 32.46,
+            "y": 450
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 32.46,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.8333,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(32.46,450) canvas=1440x900"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(38.95,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "right",
+          "arenaPos": {
+            "x": 1689.03,
+            "y": 540
+          },
+          "screenPos": {
+            "x": 1407.53,
+            "y": 450
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 32.47,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.8333,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(1407.53,450) canvas=1440x900"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(1689.03,540)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "top",
+          "arenaPos": {
+            "x": 864,
+            "y": 38.92
+          },
+          "screenPos": {
+            "x": 720,
+            "y": 32.43
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 32.43,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.8333,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(720,32.43) canvas=1440x900"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(864,38.92)"
+            }
+          ],
+          "failures": []
+        },
+        {
+          "side": "bottom",
+          "arenaPos": {
+            "x": 864,
+            "y": 1041.05
+          },
+          "screenPos": {
+            "x": 720,
+            "y": 867.54
+          },
+          "edgeDelta": 0,
+          "shipEdgeDist": 32.46,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "scale": 0.8333,
+          "insideCanvas": true,
+          "pass": true,
+          "checks": [
+            {
+              "name": "letterbox ~0",
+              "pass": true,
+              "detail": "edgeDelta=0"
+            },
+            {
+              "name": "ship inside canvas",
+              "pass": true,
+              "detail": "screen=(720,867.54) canvas=1440x900"
+            },
+            {
+              "name": "clamped to side",
+              "pass": true,
+              "detail": "arena=(864,1041.05)"
+            }
+          ],
+          "failures": []
+        }
+      ],
+      "globalChecks": [
+        {
+          "name": "arena.h === 1080",
+          "pass": true,
+          "detail": "h=1080"
+        },
+        {
+          "name": "arena.w follows aspect",
+          "pass": true,
+          "detail": "expected ~1728, got 1728"
+        }
+      ],
+      "pass": true
+    }
+  },
+  "errors": [],
+  "midGameResize": {
+    "viewport": "1600x900",
+    "vw": 1600,
+    "vh": 900,
+    "arena": {
+      "w": 1920,
+      "h": 1080
+    },
+    "canvas": {
+      "w": 1600,
+      "h": 900
+    },
+    "expectedArenaW": 1920,
+    "phase": "playing",
+    "sides": [
+      {
+        "side": "left",
+        "arenaPos": {
+          "x": 38.97,
+          "y": 540
+        },
+        "screenPos": {
+          "x": 32.47,
+          "y": 450
+        },
+        "edgeDelta": 0,
+        "shipEdgeDist": 32.47,
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": 0.8333,
+        "insideCanvas": true,
+        "pass": true,
+        "checks": [
+          {
+            "name": "letterbox ~0",
+            "pass": true,
+            "detail": "edgeDelta=0"
+          },
+          {
+            "name": "ship inside canvas",
+            "pass": true,
+            "detail": "screen=(32.47,450) canvas=1600x900"
+          },
+          {
+            "name": "clamped to side",
+            "pass": true,
+            "detail": "arena=(38.97,540)"
+          }
+        ],
+        "failures": []
+      },
+      {
+        "side": "right",
+        "arenaPos": {
+          "x": 1881.03,
+          "y": 540
+        },
+        "screenPos": {
+          "x": 1567.53,
+          "y": 450
+        },
+        "edgeDelta": 0,
+        "shipEdgeDist": 32.47,
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": 0.8333,
+        "insideCanvas": true,
+        "pass": true,
+        "checks": [
+          {
+            "name": "letterbox ~0",
+            "pass": true,
+            "detail": "edgeDelta=0"
+          },
+          {
+            "name": "ship inside canvas",
+            "pass": true,
+            "detail": "screen=(1567.53,450) canvas=1600x900"
+          },
+          {
+            "name": "clamped to side",
+            "pass": true,
+            "detail": "arena=(1881.03,540)"
+          }
+        ],
+        "failures": []
+      },
+      {
+        "side": "top",
+        "arenaPos": {
+          "x": 960,
+          "y": 38.79
+        },
+        "screenPos": {
+          "x": 800,
+          "y": 32.33
+        },
+        "edgeDelta": 0,
+        "shipEdgeDist": 32.33,
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": 0.8333,
+        "insideCanvas": true,
+        "pass": true,
+        "checks": [
+          {
+            "name": "letterbox ~0",
+            "pass": true,
+            "detail": "edgeDelta=0"
+          },
+          {
+            "name": "ship inside canvas",
+            "pass": true,
+            "detail": "screen=(800,32.33) canvas=1600x900"
+          },
+          {
+            "name": "clamped to side",
+            "pass": true,
+            "detail": "arena=(960,38.79)"
+          }
+        ],
+        "failures": []
+      },
+      {
+        "side": "bottom",
+        "arenaPos": {
+          "x": 960,
+          "y": 1041.02
+        },
+        "screenPos": {
+          "x": 800,
+          "y": 867.52
+        },
+        "edgeDelta": 0,
+        "shipEdgeDist": 32.48,
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": 0.8333,
+        "insideCanvas": true,
+        "pass": true,
+        "checks": [
+          {
+            "name": "letterbox ~0",
+            "pass": true,
+            "detail": "edgeDelta=0"
+          },
+          {
+            "name": "ship inside canvas",
+            "pass": true,
+            "detail": "screen=(800,867.52) canvas=1600x900"
+          },
+          {
+            "name": "clamped to side",
+            "pass": true,
+            "detail": "arena=(960,1041.02)"
+          }
+        ],
+        "failures": []
+      }
+    ],
+    "globalChecks": [
+      {
+        "name": "arena.h === 1080",
+        "pass": true,
+        "detail": "h=1080"
+      },
+      {
+        "name": "arena.w follows aspect",
+        "pass": true,
+        "detail": "expected ~1920, got 1920"
+      }
+    ],
+    "pass": true
+  }
+}

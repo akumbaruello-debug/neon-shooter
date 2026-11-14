@@ -1,0 +1,208 @@
+﻿=== tsc ===
+node.exe : npm notice run neon-shooter@1.0.0 npx
+At C:\Users\ratus\AppData\Local\hermes\node\npx.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/npm/bin/npx-cli.js" ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run neon-shooter@1.0.0 npx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run ^"tsc^" --noEmit
+TSC_EXIT=0
+=== lint ===
+npm.cmd : npm notice run neon-shooter@1.0.0 lint
+At line:1 char:268
++ ... | Out-File -Append -Encoding utf8 $log; npm.cmd run lint 2>&1 | Out-F ...
++                                             ~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run neon-shooter@1.0.0 lint:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run eslint .
+LINT_EXIT=0
+=== balance ===
+npm.cmd : npm notice run neon-shooter@1.0.0 balance
+At line:1 char:454
++ ... ut-File -Append -Encoding utf8 $log; npm.cmd run balance 2>&1 | Out-F ...
++                                          ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run ...r@1.0.0 balance:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run tsx scripts/balance.ts
+NEON SHOOTER ΓÇö BALANCE / TELEMETRY
+hp x1.15/tier ┬╖ dmg x1.08/tier ┬╖ qty x1.1/tier ┬╖ ref DPS = 49.3 x1.18^tier
+
+== STAGES 1..50 ==
+ st tier sec composition       boss    hpX   dmgX   qtyX   raw   eff        hp     effHp  refDps    est target    flag
+  1    0   1 rock_intro           -   1.00   1.00   1.00    22    22       308       308    49.3   35.8 35-45     ok
+  2    0   1 rock_intro           -   1.00   1.00   1.00    26    26       484       484    49.3   43.6 35-45     ok
+  3    0   1 rock_field           -   1.00   1.00   1.00    21    21       944       944    49.3   46.6 38-48     ok
+  4    1   1 rock_field           -   1.15   1.08   1.10    42    42      1369      1369    58.2   50.4 40-52     ok
+  5    1   1 rock_field           -   1.15   1.08   1.10    42    42      1041      1041    58.2   49.3 40-55     ok
+  6    1   1 shooter_squadron     -   1.15   1.08   1.10    30    28       736       635    58.2   49.7 42-55     ok
+  7    1   1 shooter_squadron     -   1.15   1.08   1.10    18     9       880       466    58.2   49.7 42-58     ok
+  8    2   1 smasher_rush         -   1.32   1.17   1.21    17    17       493       493    68.7   46.4 40-55     ok
+  9    2   1 mixed_assault        -   1.32   1.17   1.21    29    27      1035       933    68.7   52.5 45-60     ok
+ 10    2   1 elite              yes   1.32   1.17   1.21     0     0         0         0    68.7   boss 60-80     boss
+ 11    2   2 rock_field           -   1.32   1.17   1.21    42    42      1347      1347    68.7   51.8 40-55     ok
+ 12    3   2 shooter_squadron     -   1.52   1.26   1.33    27    19      1571      1100    81.0   47.4 42-56     ok
+ 13    3   2 smasher_rush         -   1.52   1.26   1.33    23    23      1289      1289    81.0   51.0 42-56     ok
+ 14    3   2 mixed_assault        -   1.52   1.26   1.33    33    31      1354      1225    81.0   54.6 45-58     ok
+ 15    3   2 elite                -   1.52   1.26   1.33    28    27      2650      2589    81.0   57.0 45-60     ok
+ 16    4   2 meteor_shower        -   1.75   1.36   1.46    64    64      1595      1595    95.6   52.6 45-60     ok
+ 17    4   2 rock_field           -   1.75   1.36   1.46    66    66      3293      3293    95.6   59.2 45-60     ok
+ 18    4   2 shooter_squadron     -   1.75   1.36   1.46    37    26      2494      1743    95.6   48.3 46-60     ok
+ 19    4   2 smasher_rush         -   1.75   1.36   1.46    32    32      2333      2333    95.6   54.4 46-60     ok
+ 20    5   2 elite              yes   2.01   1.47   1.61     0     0         0         0   112.8   boss 80-100    boss
+ 21    5   3 elite                -   2.01   1.47   1.61    40    34      3722      3256   112.8   53.8 46-60     ok
+ 22    5   3 meteor_shower        -   2.01   1.47   1.61    77    77      2553      2553   112.8   56.3 46-60     ok
+ 23    5   3 rock_field           -   2.01   1.47   1.61    77    77      4645      4645   112.8   58.7 46-60     ok
+ 24    6   3 shooter_squadron     -   2.31   1.59   1.77    43    29      5270      3941   133.1   54.6 46-60     ok
+ 25    6   3 smasher_rush         -   2.31   1.59   1.77    44    44      4139      4139   133.1   55.4 46-60     ok
+ 26    6   3 mixed_assault        -   2.31   1.59   1.77    51    44      3573      2904   133.1   54.9 48-60     ok
+ 27    6   3 elite                -   2.31   1.59   1.77    35    33      7581      7393   133.1   59.2 48-60     ok
+ 28    7   3 meteor_shower        -   2.66   1.71   1.95   105   105      4489      4489   157.0   59.1 48-60     ok
+ 29    7   3 rock_field           -   2.66   1.71   1.95   107   107      8491      8491   157.0   58.5 48-60     ok
+ 30    7   3 elite              yes   2.66   1.71   1.95     0     0         0         0   157.0   boss 100-130   boss
+ 31    7   4 smasher_rush         -   2.66   1.71   1.95    57    57      6371      6371   157.0   59.9 48-60     ok
+ 32    8   4 mixed_assault        -   3.06   1.85   2.14    69    57      8879      7397   185.3   55.7 48-60     ok
+ 33    8   4 elite                -   3.06   1.85   2.14    39    35      9711      9245   185.3   58.5 50-60     ok
+ 34    8   4 meteor_shower        -   3.06   1.85   2.14   124   124      6249      6249   185.3   58.5 50-60     ok
+ 35    8   4 rock_field           -   3.06   1.85   2.14   114   114     10557     10557   185.3   59.0 50-60     ok
+ 36    9   4 shooter_squadron     -   3.52   2.00   2.36    68    40     12857      8916   218.7   59.1 50-60     ok
+ 37    9   4 smasher_rush         -   3.52   2.00   2.36    75    75     11016     11016   218.7   58.8 50-60     ok
+ 38    9   4 mixed_assault        -   3.52   2.00   2.36    61    42     10576      7949   218.7   57.6 52-60     ok
+ 39    9   4 elite                -   3.52   2.00   2.36    40    38     12492     12208   218.7   58.7 52-60     ok
+ 40   10   4 shooter_squadron   yes   4.05   2.16   2.59     0     0         0         0   258.0   boss 130-170   boss
+ 41   10   5 rock_field           -   4.05   2.16   2.59   122   122     14900     14900   258.0   59.2 52-60     ok
+ 42   10   5 shooter_squadron     -   4.05   2.16   2.59    73    42     15194     10134   258.0   59.1 52-60     ok
+ 43   10   5 smasher_rush         -   4.05   2.16   2.59    86    86     15194     15194   258.0   59.2 52-60     ok
+ 44   11   5 mixed_assault        -   4.65   2.33   2.85    60    48     16884     14636   304.5   59.0 54-60     ok
+ 45   11   5 elite                -   4.65   2.33   2.85    43    39     17044     16336   304.5   58.8 54-60     ok
+ 46   11   5 meteor_shower        -   4.65   2.33   2.85   194   194     14840     14840   304.5   58.8 54-60     ok
+ 47   11   5 rock_field           -   4.65   2.33   2.85   120   120     16513     16513   304.5   58.6 54-60     ok
+ 48   12   5 shooter_squadron     -   5.35   2.52   3.14    72    42     19881     13548   359.3   59.2 54-60     ok
+ 49   12   5 smasher_rush         -   5.35   2.52   3.14    85    85     19344     19344   359.3   59.0 56-60     ok
+ 50   12   5 elite              yes   5.35   2.52   3.14     0     0         0         0   359.3   boss 180-300   boss
+
+== BOSSES ==
+ st name                  baseHp   scaledHp  target  impliedDps flag
+ 10 Warden Colossus         8000      10580     70s       151.1 ok
+ 20 Razor Queen            13000      26148     90s       290.5 ok
+ 30 Prism Sentinel         20000      53200    115s       462.6 ok
+ 40 Void Carrier           32000     129458    150s       863.0 ok
+ 50 Eclipse Sovereign      60000     321015    240s      1337.6 ok
+
+== WEAPONS (level 0, theoretical) ==
+weapon            role     behavior      single    crowd flag
+Focus Lance       single   projectile      54.5    218.2 ok
+Gatling Vulcan    single   projectile      53.3     53.3 ok
+Rail Charge       single   rail            55.3    276.5 ok
+Prism Beam        single   beam            55.0    275.0 ok
+Scatter Shot      crowd    projectile      44.0    220.0 ok
+Crescent Slash    crowd    melee_arc       44.3    221.4 ok
+Arc Chain         crowd    chain           43.8    147.1 ok
+Plasma Orb        crowd    projectile      44.2    221.1 ok
+Seeker Swarm      utility  homing          49.4     49.4 ok
+Ricochet Disc     utility  bounce          48.9    244.4 ok
+Boomerang Blade   utility  boomerang       47.3    236.4 ok
+Crossfire         utility  projectile      51.6     51.6 ok
+single-target dps: min 43.8 ┬╖ max 55.3 ┬╖ mean 49.3 ┬╖ band ┬▒25%
+
+== PLAYER CURVE (levels 0..45) ==
+lvl  xpToNext   cumXp  killsToLvl  stageXp kills/stage
+  0        10       0           1       62           3
+  1        17      10           1       68           3
+  2        25      27           2       75           4
+  3        33      52           2       81           4
+  4        42      85           2       88           4
+  5        52     127           3       94           4
+  6        62     179           3      101           5
+  7        72     241           3      107           5
+  8        83     313           4      114           5
+  9        94     396           4      120           5
+ 10       106     490           5      127           6
+ 11       118     596           5      133           6
+ 12       130     714           6      140           6
+ 13       143     844           6      146           7
+ 14       155     987           7      153           7
+ 15       169    1142           7      159           7
+ 16       182    1311           8      166           7
+ 17       196    1493           9      172           8
+ 18       210    1689           9      179           8
+ 19       224    1899          10      185           8
+ 20       239    2123          10      192           8
+ 21       253    2362          11      198           9
+ 22       269    2615          12      205           9
+ 23       284    2884          12      211           9
+ 24       299    3168          13      218           9
+ 25       315    3467          13      224          10
+ 26       331    3782          14      231          10
+ 27       348    4113          15      237          10
+ 28       364    4461          15      244          11
+ 29       381    4825          16      250          11
+ 30       398    5206          17      257          11
+ 31       415    5604          18      263          11
+ 32       432    6019          18      270          12
+ 33       450    6451          19      276          12
+ 34       468    6901          20      283          12
+ 35       486    7369          20      289          12
+ 36       504    7855          21      296          13
+ 37       523    8359          22      302          13
+ 38       541    8882          23      309          13
+ 39       560    9423          24      315          13
+ 40       579    9983          24      322          14
+ 41       599   10562          25      328          14
+ 42       618   11161          26      335          14
+ 43       638   11779          27      341          15
+ 44       658   12417          28      348          15
+ 45       678   13075          28      354          15
+avg kill xp 24.3 ┬╖ level after stage 50 = 41 (want 40-45) ΓåÆ PASS
+
+== THREAT STEPS (tier changes) ==
+stage tier     hpX    dmgX    qtyX
+    4    1    1.15    1.08    1.10
+    8    2    1.32    1.17    1.21
+   12    3    1.52    1.26    1.33
+   16    4    1.75    1.36    1.46
+   20    5    2.01    1.47    1.61
+   24    6    2.31    1.59    1.77
+   28    7    2.66    1.71    1.95
+   32    8    3.06    1.85    2.14
+   36    9    3.52    2.00    2.36
+   40   10    4.05    2.16    2.59
+   44   11    4.65    2.33    2.85
+   48   12    5.35    2.52    3.14
+
+BALANCE: OK
+BALANCE_EXIT=0
+=== build ===
+npm.cmd : npm notice run neon-shooter@1.0.0 build
+At line:1 char:644
++ ...  Out-File -Append -Encoding utf8 $log; npm.cmd run build 2>&1 | Out-F ...
++                                            ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run neon-shooter@1.0.0 build:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run next build
+Γû▓ Next.js 16.4.6 (Turbopack)
+Γ£ô Running next.config.ts took 110ms
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 4.0s
+  Running TypeScript ...
+  Finished TypeScript in 6.8s ...
+  Collecting page data using 5 workers ...
+  Generating static pages using 5 workers (0/4) ...
+  Generating static pages using 5 workers (1/4) 
+  Generating static pages using 5 workers (2/4) 
+  Generating static pages using 5 workers (3/4) 
+Γ£ô Generating static pages using 5 workers (4/4) in 842ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γöö Γùï /_not-found
+
+
+Γùï  (Static)  prerendered as static content
+
+BUILD_EXIT=0
