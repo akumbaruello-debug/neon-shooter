@@ -57,7 +57,9 @@ const shots = [
         { timeout: 10000 },
       );
       const n = await p.locator(".cards-row > *").count();
-      if (n !== 5) return `expected 5 pattern cards, got ${n}`;
+      // 10 attack patterns ship as of hard-mode Phase 2 (was 5). The picker
+      // lists every pattern in PATTERN_LIST.
+      if (n !== 10) return `expected 10 pattern cards, got ${n}`;
       await p.screenshot({ path: join(out, "03b-pattern-cards.png") });
       await ready();
       await p.keyboard.press("1");
