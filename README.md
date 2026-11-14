@@ -1,4 +1,4 @@
-# Neon Dodger — Starfall Aegis
+# Neon Shooter
 
 A full-screen neon space shooter. 50 stages, 12 weapons, 18 skills, 5 bosses,
 procedural vector art and 100% synthesized audio (no asset files, no network).
@@ -11,7 +11,7 @@ Built on Next.js (App Router) + TypeScript strict + PixiJS v8.
 
 ### One click (recommended)
 
-Double-click **Neon Dodger** on the Desktop. It runs `scripts/launch-game.ps1`, which:
+Double-click **Neon Shooter** on the Desktop. It runs `scripts/launch-game.ps1`, which:
 
 1. changes to this folder,
 2. builds the app only if `.next` is missing or the source is newer (a small
@@ -19,7 +19,7 @@ Double-click **Neon Dodger** on the Desktop. It runs `scripts/launch-game.ps1`, 
 3. starts `next start` on **port 3123** (reuses an already-running server),
 4. waits until the URL answers,
 5. opens Chrome (else Edge, else your default browser) in app mode + fullscreen
-   with a dedicated profile (`%LOCALAPPDATA%\NeonDodgerProfile`),
+   with a dedicated profile (`%LOCALAPPDATA%\NeonShooterProfile`),
 6. stops the server it started when that window closes.
 
 Reinstall / remove the shortcut:
@@ -124,11 +124,12 @@ legacy/                  the original vanilla game (kept for reference)
 
 ## Design decisions (chosen where the brief left room)
 
-1. **Project location** — the brief said "the current game is in this project
-   folder". The only game here was `stuff/subagent-demo-game` (a vanilla
-   HTML/JS game, "Neon Dodger 2.0"), so that folder became the project and
-   **the name was kept** (the rule was "keep the current name if it already has
-   one"). The working title "Starfall Aegis" is used as the subtitle.
+1. **Project location & name** — the original game lived in
+   `stuff/subagent-demo-game` (a vanilla HTML/JS game, "Neon Dodger 2.0"), which
+   became this project (the old version was moved to `legacy/`, not deleted).
+   The project was later moved to `projects/neon shooter` and renamed
+   **Neon Shooter**; the old `nd.*` localStorage keys and `legacy/*` are left
+   untouched so existing saves and the original snapshot still work.
 2. **Stack** — the old game was static HTML with no build. The brief explicitly
    requires TypeScript, PixiJS, `next start` and a `.next` build, so a Next.js
    App Router + TS strict app was created in place; the old files were moved to

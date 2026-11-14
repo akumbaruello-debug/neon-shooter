@@ -1,5 +1,5 @@
 /**
- * Shared type contracts for the Neon Dodger game engine.
+ * Shared type contracts for the Neon Shooter game engine.
  * The engine is plain TypeScript and must not import React.
  */
 

@@ -1,5 +1,5 @@
 #requires -version 5.1
-# Creates a Desktop shortcut that launches Neon Dodger in one click.
+# Creates a Desktop shortcut that launches Neon Shooter in one click.
 # Also generates public/ship.ico if it is missing.
 
 $ErrorActionPreference = 'Stop'
@@ -108,7 +108,7 @@ if (Test-Path $IcoPath) {
 }
 
 $desktop = [Environment]::GetFolderPath('Desktop')
-$lnkPath = Join-Path $desktop 'Neon Dodger.lnk'
+$lnkPath = Join-Path $desktop 'Neon Shooter.lnk'
 
 $shell    = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($lnkPath)
@@ -116,7 +116,7 @@ $shortcut.TargetPath       = 'powershell.exe'
 $shortcut.Arguments        = "-NoProfile -ExecutionPolicy Bypass -File `"$Launcher`""
 $shortcut.WorkingDirectory = $ProjectRoot
 $shortcut.IconLocation     = $iconLocation
-$shortcut.Description      = 'Neon Dodger - one-click launch'
+$shortcut.Description      = 'Neon Shooter - one-click launch'
 $shortcut.Save()
 
 if (Test-Path $lnkPath) {

@@ -17,7 +17,7 @@ const ui = Rajdhani({
 });
 
 export const metadata: Metadata = {
-  title: "Neon Dodger — Starfall Aegis",
+  title: "Neon Shooter",
   description: "A full-screen neon space shooter. 50 stages, 12 weapons, 18 skills, 5 bosses.",
 };
 

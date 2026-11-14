@@ -26,7 +26,7 @@ function LoadingSplash() {
   return (
     <div className="overlay overlay-loading">
       <div className="loading-inner">
-        <div className="loading-title">NEON DODGER</div>
+        <div className="loading-title">NEON SHOOTER</div>
         <div className="loading-bar">
           <i />
         </div>

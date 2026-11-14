@@ -25,9 +25,9 @@ export default function TitleScreen({
       <div className="title-inner">
         <h1 className="game-title">
           <span>NEON</span>
-          <span>DODGER</span>
+          <span>SHOOTER</span>
         </h1>
-        <p className="game-subtitle">Starfall Aegis · 50 stages · 12 weapons · 18 skills · 5 bosses</p>
+        <p className="game-subtitle">50 stages · 12 weapons · 18 skills · 5 bosses</p>
 
         <div className="title-buttons">
           <button type="button" className="btn btn-primary" onClick={onStart}>

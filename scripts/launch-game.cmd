@@ -1,5 +1,5 @@
 @echo off
-rem Double-clickable wrapper for the Neon Dodger launcher.
+rem Double-clickable wrapper for the Neon Shooter launcher.
 setlocal
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0launch-game.ps1" %*
 set "RC=%ERRORLEVEL%"

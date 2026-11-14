@@ -1,5 +1,5 @@
 #requires -version 5.1
-# Neon Dodger one-click launcher.
+# Neon Shooter one-click launcher.
 # Builds the game if needed, starts the Next.js server on a fixed port,
 # opens the game in an app-mode browser window, then shuts the server down
 # when the window closes (only if this script started the server).
@@ -156,7 +156,7 @@ if ($serverAlreadyRunning) {
                 Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
                 [System.Windows.Forms.MessageBox]::Show(
                     "Build failed. See the last 20 lines below.`r`n`r`n$tail",
-                    'Neon Dodger', 'OK', 'Error') | Out-Null
+                    'Neon Shooter', 'OK', 'Error') | Out-Null
             } catch { }
             Write-Step "Build failed (exit code $($buildProc.ExitCode))."
             exit 1
@@ -209,7 +209,7 @@ try {
     foreach ($c in $chromePaths) { if (Test-Path $c) { $browser = $c; break } }
     if (-not $browser) { foreach ($e in $edgePaths) { if (Test-Path $e) { $browser = $e; break } } }
 
-    $profileDir = Join-Path $env:LOCALAPPDATA 'NeonDodgerProfile'
+    $profileDir = Join-Path $env:LOCALAPPDATA 'NeonShooterProfile'
 
     if ($browser) {
         $browserArgs = @(

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Neon Dodger — DOM shell UI (HUD, overlays, cards, settings).
+   Neon Shooter — DOM shell UI (HUD, overlays, cards, settings).
    Imported by GameShell. Everything sizes in rem so the whole UI scales with
    --ui-scale, which is applied to the root font-size by .game-root.
    ============================================================================ */

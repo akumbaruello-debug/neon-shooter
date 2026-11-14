@@ -1,5 +1,5 @@
 /**
- * PixiJS v8 renderer for the Neon Dodger arena.
+ * PixiJS v8 renderer for the Neon Shooter arena.
  *
  * One full-window canvas. The 1920x1080 arena is scaled by a single uniform
  * factor and centred (letterboxed); the backdrop is a screen-space layer that

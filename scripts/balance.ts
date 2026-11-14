@@ -411,7 +411,7 @@ if (jsonMode) {
 } else {
   const out: string[] = [];
 
-  out.push("NEON DODGER — BALANCE / TELEMETRY");
+  out.push("NEON SHOOTER — BALANCE / TELEMETRY");
   out.push(
     `hp x${HP_GROWTH}/tier · dmg x${DMG_GROWTH}/tier · qty x${QTY_GROWTH}/tier · ref DPS = ${fmt(dpsMean)} x${REF_DPS_GROWTH_PER_TIER}^tier`,
   );

@@ -1,4 +1,4 @@
-# PROGRESS — Starfall Aegis (Neon Dodger)
+# PROGRESS — Neon Shooter
 
 Branch `shooter-overhaul`. Stack: Next.js App Router + TS strict + PixiJS v8 + pixi-filters.
 Old vanilla game preserved in `legacy/` (snapshot commit `f2cf284` on `main`).

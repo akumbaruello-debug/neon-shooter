@@ -1,6 +1,6 @@
-# Neon Dodger Launcher
+# Neon Shooter Launcher
 
-One-click launcher for the Neon Dodger Next.js game. Windows PowerShell 5.1+.
+One-click launcher for the Neon Shooter Next.js game. Windows PowerShell 5.1+.
 
 ## Files
 
@@ -9,7 +9,7 @@ One-click launcher for the Neon Dodger Next.js game. Windows PowerShell 5.1+.
   closes (only if it started the server).
 - `launch-game.cmd` - double-clickable wrapper (calls the ps1 with
   `-ExecutionPolicy Bypass`).
-- `install-shortcut.ps1` - creates `Neon Dodger.lnk` on the Desktop and
+- `install-shortcut.ps1` - creates `Neon Shooter.lnk` on the Desktop and
   generates `public/ship.ico` if missing.
 - `uninstall-shortcut.ps1` - removes the Desktop shortcut.
 
@@ -19,7 +19,7 @@ One-click launcher for the Neon Dodger Next.js game. Windows PowerShell 5.1+.
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-shortcut.ps1
 ```
 
-Then double-click **Neon Dodger** on the Desktop.
+Then double-click **Neon Shooter** on the Desktop.
 
 ## Uninstall
 
@@ -32,7 +32,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall-shortcut.p
 - Fixed port: **3123** (`http://localhost:3123/?autostart=1`).
 - First run builds the app (status window, ~1 minute). Later runs reuse `.next`
   unless sources are newer than `.next/BUILD_ID`.
-- Uses a dedicated browser profile at `%LOCALAPPDATA%\NeonDodgerProfile`, so the
+- Uses a dedicated browser profile at `%LOCALAPPDATA%\NeonShooterProfile`, so the
   game window is its own process and closing it shuts the server down.
 - Idempotent: if the server is already running it is reused and left running.
 - No global installs, no downloads. The icon is drawn with System.Drawing
