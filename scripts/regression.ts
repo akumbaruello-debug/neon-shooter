@@ -10,6 +10,7 @@
  * Run: npx tsx scripts/regression.ts   (exit 1 on any failure)
  */
 import { FIXED_DT } from "../src/game/data/constants";
+import { ATTACK_PATTERNS, MAX_VOLLEY, expandAngles, volleyShots } from "../src/game/data/patterns";
 import { BOSSES } from "../src/game/data/bosses";
 import { Rng } from "../src/game/core/rng";
 import { Player } from "../src/game/player";
@@ -210,6 +211,93 @@ function makeCtx(): { ctx: GameCtx; particles: ParticleCall[]; aoe: { n: number 
   dir.update(0.01);
   check("shooter dispatches past the blocked smasher head", live("shooter") === 1, `live=${live("shooter")}`);
   check("blocked smasher stays queued", internals.pending.length === 1, `pending=${internals.pending.length}`);
+}
+
+// ------------------------------------------- 5. volley damage conservation
+{
+  const EPS = 1e-9;
+  const NATIVE = [1, 3, 4, 5];
+  const DEF_DAMAGE = 7; // arbitrary; cancels in the conservation identity
+  const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
+
+  // (a) extra = 0: pattern-bullet damage sums to exactly one native volley.
+  let aOk = true;
+  let aDetail = "";
+  for (const p of Object.values(ATTACK_PATTERNS)) {
+    for (const n of NATIVE) {
+      const shots = volleyShots(p.angles, n, 0);
+      const total = sum(shots.map((s) => s.mul)) * DEF_DAMAGE;
+      if (!close(total, n * DEF_DAMAGE, EPS)) {
+        aOk = false;
+        aDetail = `${p.id} n=${n}: ${total} != ${n * DEF_DAMAGE}`;
+      }
+    }
+  }
+  check("(a) pattern volley damage == one native volley (extra 0)", aOk, aDetail);
+
+  // (b) extra = 3: milestones keep full damage, total = (native + effectiveExtra).
+  let bMilestoneOk = true;
+  let bTotalOk = true;
+  let bDetail = "";
+  for (const p of Object.values(ATTACK_PATTERNS)) {
+    for (const n of NATIVE) {
+      const shots = volleyShots(p.angles, n, 3);
+      const effectiveExtra = shots.length - expandAngles(p.angles, 0).length;
+      const total = sum(shots.map((s) => s.mul)) * DEF_DAMAGE;
+      const want = (n + effectiveExtra) * DEF_DAMAGE;
+      if (!close(total, want, EPS)) {
+        bTotalOk = false;
+        bDetail = `${p.id} n=${n}: ${total} != ${want}`;
+      }
+      for (const s of shots) {
+        if (s.milestone && s.mul !== 1) {
+          bMilestoneOk = false;
+          bDetail = `${p.id} milestone mul ${s.mul}`;
+        }
+      }
+    }
+  }
+  check("(b) milestone bullets carry full damage (mul 1)", bMilestoneOk, bDetail);
+  check("(b) total damage = (native + effectiveExtra) * dmg", bTotalOk, bDetail);
+
+  // (b) cap case: radiant (7) + 100 extra saturates MAX_VOLLEY; total still conserved.
+  const capped = volleyShots(ATTACK_PATTERNS.radiant.angles, 3, 100);
+  const cappedExtra = capped.length - ATTACK_PATTERNS.radiant.angles.length;
+  const cappedTotal = sum(capped.map((s) => s.mul)) * DEF_DAMAGE;
+  check(
+    "(b) MAX_VOLLEY cap keeps the volley conserved",
+    capped.length === MAX_VOLLEY &&
+      cappedExtra === MAX_VOLLEY - ATTACK_PATTERNS.radiant.angles.length &&
+      close(cappedTotal, (3 + cappedExtra) * DEF_DAMAGE, EPS),
+    `len=${capped.length} extra=${cappedExtra} total=${cappedTotal}`,
+  );
+
+  // (b) forward at extra 0 stays all full damage.
+  const fwd0 = volleyShots([0], 1, 0);
+  check("(b) forward extra 0 -> all mul 1", fwd0.every((s) => s.mul === 1));
+
+  // (c) forward equality: the first n shots stay full damage for k = 0..3.
+  const forwardBases: number[][] = [
+    [0],
+    [-0.5, 0, 0.5],
+    [-0.6, -0.2, 0.2, 0.6],
+    [-0.8, -0.4, 0, 0.4, 0.8],
+  ];
+  let cOk = true;
+  let cDetail = "";
+  for (const native of forwardBases) {
+    const n = native.length;
+    for (let k = 0; k <= 3; k++) {
+      const shots = volleyShots(native, n, k);
+      for (let i = 0; i < n; i++) {
+        if (shots[i]?.mul !== 1) {
+          cOk = false;
+          cDetail = `n=${n} k=${k} shot ${i} mul ${shots[i]?.mul}`;
+        }
+      }
+    }
+  }
+  check("(c) forward stays mul 1 across k = 0..3", cOk, cDetail);
 }
 
 console.log("");

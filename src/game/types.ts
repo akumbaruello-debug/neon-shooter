@@ -33,7 +33,17 @@ export type WeaponBehavior =
   | "multi" // simultaneous forward/rear/diagonals
 
 /** Named multi-shot geometries. `forward` keeps each weapon's native volley. */
-export type AttackPatternId = "forward" | "twin" | "fan" | "fore_aft" | "radiant";
+export type AttackPatternId =
+  | "forward"
+  | "twin"
+  | "fan"
+  | "fore_aft"
+  | "radiant"
+  | "cross"
+  | "sniper"
+  | "close_pellet"
+  | "rear_guard"
+  | "wide_fan";
 
 export interface WeaponDef {
   id: WeaponId;

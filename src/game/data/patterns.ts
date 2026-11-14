@@ -20,6 +20,18 @@ export interface AttackPatternDef {
   color: number;
   /** Relative aim offsets fired per volley (unused for `forward`). */
   angles: number[];
+
+  // --- per-pattern tradeoff modifiers (undefined/1 for `forward`) ---
+  /** Projectile speed multiplier. Pattern's tradeoff (reach vs. control). */
+  speedMul?: number;
+  /** Lifetime multiplier. Reach / persistence tradeoff. */
+  lifeMul?: number;
+  /** Projectile radius multiplier. Hitbox vs. precision tradeoff. */
+  sizeMul?: number;
+  /** Fire-interval multiplier. Coverage vs. cadence tradeoff. */
+  intervalMul?: number;
+  /** Extra enemies each shot passes through. Tradeoff vs. spread/damage. */
+  pierceBonus?: number;
 }
 
 export const ATTACK_PATTERNS: Record<AttackPatternId, AttackPatternDef> = {
@@ -57,6 +69,47 @@ export const ATTACK_PATTERNS: Record<AttackPatternId, AttackPatternDef> = {
     desc: "Even 360° ring — bullets up to 7.",
     color: 0xc45aff,
     angles: Array.from({ length: 7 }, (_, i) => (i * TAU) / 7),
+  },
+  cross: {
+    id: "cross",
+    name: "Cross",
+    desc: "Four shots in a cross. Broad coverage, but only one bears on a lone foe.",
+    color: 0xff6b3d,
+    angles: [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2],
+  },
+  sniper: {
+    id: "sniper",
+    name: "Sniper",
+    desc: "One long, fast shot. Huge reach, zero coverage.",
+    color: 0x9ef7ff,
+    angles: [0],
+    speedMul: 1.5,
+    lifeMul: 1.4,
+    sizeMul: 0.9,
+  },
+  close_pellet: {
+    id: "close_pellet",
+    name: "Close Pellet",
+    desc: "Five fat pellets, short-lived. Point-blank burst only.",
+    color: 0xffb347,
+    angles: [-0.5, -0.25, 0, 0.25, 0.5],
+    lifeMul: 0.5,
+    sizeMul: 1.2,
+  },
+  rear_guard: {
+    id: "rear_guard",
+    name: "Rear Guard",
+    desc: "Shots forward, splayed, and straight back. Rear cover at the cost of forward density.",
+    color: 0x7cffb2,
+    angles: [0, 0.22, -0.22, Math.PI],
+  },
+  wide_fan: {
+    id: "wide_fan",
+    name: "Wide Fan",
+    desc: "Seven-shot fan, widest coverage. Slightly slower cadence.",
+    color: 0xffe066,
+    angles: Array.from({ length: 7 }, (_, i) => (i - 3) * 0.25),
+    intervalMul: 1.15,
   },
 };
 
@@ -170,4 +223,47 @@ export function expandAngles(base: number[], extra: number): number[] {
 
 export function getPattern(id: AttackPatternId): AttackPatternDef {
   return ATTACK_PATTERNS[id];
+}
+
+/** One projectile of a volley: absolute geometry plus its damage share. */
+export interface VolleyShot {
+  /** Offset from aim, radians. */
+  angle: number;
+  /** Damage multiplier applied to the weapon's per-bullet damage. */
+  mul: number;
+  /** True for additive (full-damage) milestone bullets. */
+  milestone: boolean;
+}
+
+/**
+ * Resolve one volley into per-shot damage shares.
+ *
+ * Pattern bullets (non-milestone) each carry `nativeCount / base.length`, so the
+ * pattern-bullet damage sums to exactly ONE native volley no matter the shape:
+ * more bullets = more coverage, never more damage.
+ *
+ * Milestone bullets (`Mods.bulletCount`, path via `expandAngles`) keep full
+ * per-bullet damage (`mul = 1`) and are interleaved evenly across the volley.
+ *
+ * `forward` is a no-op: called with `base = nativeAngles`, `base.length ===
+ * nativeCount`, so every shot has `mul === 1`. There the conserved share IS the
+ * full share, so added bullets are not flagged as milestones either.
+ *
+ * Cap-aware: if `expandAngles` hits MAX_VOLLEY the milestone count shrinks, but
+ * the pattern-bullet total still equals one native volley.
+ */
+export function volleyShots(base: number[], nativeCount: number, extra: number): VolleyShot[] {
+  const expanded = expandAngles(base, extra);
+  const total = expanded.length;
+  const patternCount = base.length > 0 ? base.length : 1;
+  const patternMul = base.length > 0 ? nativeCount / base.length : nativeCount;
+  const added = Math.max(0, total - patternCount);
+  const out: VolleyShot[] = [];
+  for (let i = 0; i < total; i++) {
+    const j = i + 1;
+    // Even spread of `added` milestones across `total` slots.
+    const isMilestone = added > 0 && Math.floor((j * added) / total) > Math.floor(((j - 1) * added) / total);
+    out.push({ angle: expanded[i] ?? 0, mul: isMilestone ? 1 : patternMul, milestone: isMilestone && patternMul !== 1 });
+  }
+  return out;
 }

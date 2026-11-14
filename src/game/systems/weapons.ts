@@ -11,7 +11,8 @@ import type { SfxName } from "../audio";
 import { clamp } from "../core/math";
 import type { GameCtx } from "../ctx";
 import { ARENA_W } from "../data/constants";
-import { ATTACK_PATTERNS, DEFAULT_PATTERN, expandAngles } from "../data/patterns";
+import { ATTACK_PATTERNS, DEFAULT_PATTERN, volleyShots } from "../data/patterns";
+import type { AttackPatternDef, VolleyShot } from "../data/patterns";
 import { BASIC_WEAPON, WEAPONS } from "../data/weapons";
 import type { Bullet, BulletShape } from "../entities";
 import { pools } from "../entities";
@@ -119,8 +120,8 @@ export class WeaponSystem {
     const def = this.def;
     const mods = this.ctx.player.mods;
     const dmgMult = 1 + mods.damagePct / 100;
-    const effInterval = def.fireInterval / (1 + mods.fireRatePct / 100);
-    const pierce = def.pierce + mods.pierceFlat;
+    const effInterval = (def.fireInterval / (1 + mods.fireRatePct / 100)) * this.patInterval;
+    const pierce = def.pierce + mods.pierceFlat + this.patPierce;
 
     switch (def.behavior) {
       case "rail":
@@ -139,12 +140,12 @@ export class WeaponSystem {
         this.cooldown = effInterval;
         const mx = x + Math.cos(aimAngle) * MUZZLE;
         const my = y + Math.sin(aimAngle) * MUZZLE;
-        const angles = this.volleyAngles(aimAngle);
-        for (const a of angles) {
-          const b = this.emit(mx, my, a, def.projectileSpeed * this.speedMul, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, PROJECTILE_SHAPE[def.id], pierce, def.knockback);
+        const shots = this.resolveVolley(aimAngle);
+        for (const shot of shots) {
+          const b = this.emit(mx, my, shot.angle, def.projectileSpeed * this.speedMul * this.patSpeed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * shot.mul, def.color, def.accent, def.lifetime * this.patLife, PROJECTILE_SHAPE[def.id], pierce, def.knockback);
           if (def.aoe !== undefined) b.aoe = def.aoe;
         }
-        this.ctx.stats.shotsFired += angles.length;
+        this.ctx.stats.shotsFired += shots.length;
         this.muzzle(x, y);
         return;
       }
@@ -158,13 +159,13 @@ export class WeaponSystem {
         const mx = x + Math.cos(aimAngle) * MUZZLE;
         const my = y + Math.sin(aimAngle) * MUZZLE;
         // Slow-expanding arc: travels `range` over `lifetime`, cuts enemy fire.
-        const speed = ((def.range ?? 190) / def.lifetime) * this.speedMul;
-        const angles = this.volleyAngles(aimAngle);
-        for (const a of angles) {
-          const b = this.emit(mx, my, a, speed, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "arc", 99, def.knockback);
+        const speed = ((def.range ?? 190) / def.lifetime) * this.speedMul * this.patSpeed;
+        const shots = this.resolveVolley(aimAngle);
+        for (const shot of shots) {
+          const b = this.emit(mx, my, shot.angle, speed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * shot.mul, def.color, def.accent, def.lifetime * this.patLife, "arc", 99, def.knockback);
           b.cutsBullets = true;
         }
-        this.ctx.stats.shotsFired += angles.length;
+        this.ctx.stats.shotsFired += shots.length;
         this.muzzle(x, y);
         return;
       }
@@ -177,15 +178,15 @@ export class WeaponSystem {
         this.cooldown = effInterval;
         const mx = x + Math.cos(aimAngle) * MUZZLE;
         const my = y + Math.sin(aimAngle) * MUZZLE;
-        const speed = ((def.range ?? 300) / def.lifetime) * this.speedMul;
-        const angles = this.volleyAngles(aimAngle);
-        for (const a of angles) {
-          const b = this.emit(mx, my, a, speed, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "bolt", pierce, def.knockback);
+        const speed = ((def.range ?? 300) / def.lifetime) * this.speedMul * this.patSpeed;
+        const shots = this.resolveVolley(aimAngle);
+        for (const shot of shots) {
+          const b = this.emit(mx, my, shot.angle, speed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * shot.mul, def.color, def.accent, def.lifetime * this.patLife, "bolt", pierce, def.knockback);
           // Chain jumps are resolved by the collisions system from these fields.
           b.chainJumps = def.chainJumps ?? 0;
           b.chainFalloff = def.chainFalloff ?? 1;
         }
-        this.ctx.stats.shotsFired += angles.length;
+        this.ctx.stats.shotsFired += shots.length;
         this.muzzle(x, y);
         return;
       }
@@ -198,13 +199,13 @@ export class WeaponSystem {
         this.cooldown = effInterval;
         const mx = x + Math.cos(aimAngle) * MUZZLE;
         const my = y + Math.sin(aimAngle) * MUZZLE;
-        const angles = this.volleyAngles(aimAngle);
-        for (const a of angles) {
-          const b = this.emit(mx, my, a, def.projectileSpeed * this.speedMul, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "missile", pierce, def.knockback);
+        const shots = this.resolveVolley(aimAngle);
+        for (const shot of shots) {
+          const b = this.emit(mx, my, shot.angle, def.projectileSpeed * this.speedMul * this.patSpeed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * shot.mul, def.color, def.accent, def.lifetime * this.patLife, "missile", pierce, def.knockback);
           b.homing = def.homing ?? 0;
           b.trail = 1;
         }
-        this.ctx.stats.shotsFired += angles.length;
+        this.ctx.stats.shotsFired += shots.length;
         this.muzzle(x, y);
         return;
       }
@@ -221,14 +222,14 @@ export class WeaponSystem {
         this.cooldown = effInterval;
         const mx = x + Math.cos(aimAngle) * MUZZLE;
         const my = y + Math.sin(aimAngle) * MUZZLE;
-        const angles = this.volleyAngles(aimAngle);
-        for (const a of angles) {
+        const shots = this.resolveVolley(aimAngle);
+        for (const shot of shots) {
           if (this.activeCount() >= (def.maxInFlight ?? 1)) break;
-          const b = this.emit(mx, my, a, def.projectileSpeed * this.speedMul, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "disc", pierce, def.knockback);
+          const b = this.emit(mx, my, shot.angle, def.projectileSpeed * this.speedMul * this.patSpeed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * shot.mul, def.color, def.accent, def.lifetime * this.patLife, "disc", pierce, def.knockback);
           b.bounceLeft = def.bounce ?? 0;
           b.spin = 14;
         }
-        this.ctx.stats.shotsFired += angles.length;
+        this.ctx.stats.shotsFired += shots.length;
         this.muzzle(x, y);
         return;
       }
@@ -245,17 +246,17 @@ export class WeaponSystem {
         this.cooldown = effInterval;
         const mx = x + Math.cos(aimAngle) * MUZZLE;
         const my = y + Math.sin(aimAngle) * MUZZLE;
-        const angles = this.volleyAngles(aimAngle);
-        for (const a of angles) {
+        const shots = this.resolveVolley(aimAngle);
+        for (const shot of shots) {
           if (this.activeCount() >= (def.maxInFlight ?? 1)) break;
-          const b = this.emit(mx, my, a, def.projectileSpeed * this.speedMul, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "blade", pierce, def.knockback);
+          const b = this.emit(mx, my, shot.angle, def.projectileSpeed * this.speedMul * this.patSpeed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * shot.mul, def.color, def.accent, def.lifetime * this.patLife, "blade", pierce, def.knockback);
           b.boomerang = true;
           b.maxDist = def.returnDistance ?? 0;
           b.originX = x;
           b.originY = y;
           b.spin = 20;
         }
-        this.ctx.stats.shotsFired += angles.length;
+        this.ctx.stats.shotsFired += shots.length;
         this.muzzle(x, y);
         return;
       }
@@ -325,14 +326,43 @@ export class WeaponSystem {
     return 1 + this.ctx.player.mods.bulletSpeedPct / 100;
   }
 
+  /** The selected pattern's def, or null for `forward` (native geometry). */
+  private get patternDef(): AttackPatternDef | null {
+    return this.pattern === "forward" ? null : ATTACK_PATTERNS[this.pattern];
+  }
+
+  /** Pattern tradeoff multipliers (all 1 / 0 for `forward`). */
+  private get patSpeed(): number {
+    return this.patternDef?.speedMul ?? 1;
+  }
+
+  private get patLife(): number {
+    return this.patternDef?.lifeMul ?? 1;
+  }
+
+  private get patSize(): number {
+    return this.patternDef?.sizeMul ?? 1;
+  }
+
+  private get patInterval(): number {
+    return this.patternDef?.intervalMul ?? 1;
+  }
+
+  private get patPierce(): number {
+    return this.patternDef?.pierceBonus ?? 0;
+  }
+
   /**
-   * Absolute angles for one volley, aiming at `aimAngle`. The selected pattern
+   * One volley's shots (absolute angles + damage shares). The selected pattern
    * supplies the base offsets (`forward` keeps the weapon's own geometry);
-   * milestone bullets densify it via `expandAngles`.
+   * `volleyShots` conserves the native volley's damage and interleaves the
+   * full-damage milestone bullets.
    */
-  private volleyAngles(aimAngle: number): number[] {
+  private resolveVolley(aimAngle: number): VolleyShot[] {
     const base = this.pattern === "forward" ? this.nativeAngles() : ATTACK_PATTERNS[this.pattern].angles;
-    return expandAngles(base, this.ctx.player.mods.bulletCount).map((off) => aimAngle + off);
+    const shots = volleyShots(base, this.def.count, this.ctx.player.mods.bulletCount);
+    for (const s of shots) s.angle += aimAngle;
+    return shots;
   }
 
   /** The weapon's own volley offsets (relative to aim) when the pattern is `forward`. */
@@ -377,16 +407,16 @@ export class WeaponSystem {
     if (this.chargeAccum >= minCharge) {
       const ratio = clamp(this.chargeAccum / ct, 0, 1);
       const damage = def.damage * (0.4 + 0.6 * ratio) * dmgMult;
-      const speed = def.projectileSpeed * this.speedMul;
-      const life = (ARENA_W * 1.5) / speed; // long enough to cross the arena
+      const speed = def.projectileSpeed * this.speedMul * this.patSpeed;
+      const life = ((ARENA_W * 1.5) / speed) * this.patLife; // long enough to cross the arena
       const mx = x + Math.cos(aimAngle) * MUZZLE;
       const my = y + Math.sin(aimAngle) * MUZZLE;
-      const angles = this.volleyAngles(aimAngle);
-      for (const a of angles) {
-        const b = this.emit(mx, my, a, speed, def.size * this.sizeMul, damage, def.color, def.accent, life, "beam", 99, def.knockback);
+      const shots = this.resolveVolley(aimAngle);
+      for (const shot of shots) {
+        const b = this.emit(mx, my, shot.angle, speed, def.size * this.sizeMul * this.patSize, damage * shot.mul, def.color, def.accent, life, "beam", 99, def.knockback);
         b.trail = 1;
       }
-      this.ctx.stats.shotsFired += angles.length;
+      this.ctx.stats.shotsFired += shots.length;
       this.muzzle(x, y);
     }
     this.charging = false;
@@ -414,16 +444,16 @@ export class WeaponSystem {
     if (this.cooldown <= 0) {
       this.cooldown = effInterval;
       this.updateRamp();
-      const speed = BEAM_SPEED * this.speedMul;
-      const life = (def.range ?? 300) / speed;
+      const speed = BEAM_SPEED * this.speedMul * this.patSpeed;
+      const life = ((def.range ?? 300) / speed) * this.patLife;
       const mx = x + Math.cos(aimAngle) * MUZZLE;
       const my = y + Math.sin(aimAngle) * MUZZLE;
-      const angles = this.volleyAngles(aimAngle);
-      for (const a of angles) {
-        const b = this.emit(mx, my, a, speed, def.size * this.sizeMul, def.damage * dmgMult * this.rampBonus, def.color, def.accent, life, "beam", 99, def.knockback);
+      const shots = this.resolveVolley(aimAngle);
+      for (const shot of shots) {
+        const b = this.emit(mx, my, shot.angle, speed, def.size * this.sizeMul * this.patSize, def.damage * dmgMult * this.rampBonus * shot.mul, def.color, def.accent, life, "beam", 99, def.knockback);
         b.trail = 1;
       }
-      this.ctx.stats.shotsFired += angles.length;
+      this.ctx.stats.shotsFired += shots.length;
       this.muzzle(x, y);
     }
     if (this.heatValue >= 1 && this.overheatTimer <= 0) {

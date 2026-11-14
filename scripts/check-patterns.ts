@@ -3,7 +3,7 @@
  * MAX_VOLLEY cap. Run: npx tsx scripts/check-patterns.ts
  */
 import assert from "node:assert/strict";
-import { ATTACK_PATTERNS, expandAngles } from "../src/game/data/patterns";
+import { ATTACK_PATTERNS, MAX_VOLLEY, expandAngles, volleyShots } from "../src/game/data/patterns";
 
 const crossfireNative = [0, Math.PI, 0.55, -0.55];
 const norm = (a: number) => ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
@@ -44,6 +44,41 @@ for (const e of [0, 1, 4, 9, 100]) {
   for (const base of [crossfireNative, ATTACK_PATTERNS.fan.angles, ATTACK_PATTERNS.radiant.angles, [0], [1, 2]]) {
     assert.ok(expandAngles(base, e).length <= 16, "volley cap breached");
   }
+}
+
+// 6. pattern roster + per-pattern tradeoff modifiers are finite
+const patternIds = Object.keys(ATTACK_PATTERNS);
+assert.equal(patternIds.length, 10, `expected 10 patterns, got ${patternIds.length}`);
+const MOD_FIELDS = ["speedMul", "lifeMul", "sizeMul", "intervalMul", "pierceBonus"] as const;
+for (const p of Object.values(ATTACK_PATTERNS)) {
+  assert.ok(p.angles.length >= 1, `${p.id} has no angles`);
+  for (const f of MOD_FIELDS) {
+    const v = p[f];
+    if (v !== undefined) assert.ok(Number.isFinite(v), `${p.id}.${f} is not finite: ${v}`);
+  }
+  if (p.id === "forward") {
+    for (const f of MOD_FIELDS) {
+      const v = p[f];
+      assert.ok(v === undefined || v === 1 || v === 0, `forward.${f} must stay neutral: ${v}`);
+    }
+  }
+}
+
+// 7. every pattern conserves exactly one native volley via volleyShots
+const NATIVE = [1, 3, 4, 5];
+const EPS = 1e-9;
+for (const p of Object.values(ATTACK_PATTERNS)) {
+  for (const n of NATIVE) {
+    const shots = volleyShots(p.angles, n, 0);
+    const total = shots.reduce((s, x) => s + x.mul, 0);
+    assert.ok(Math.abs(total - n) < EPS, `${p.id} n=${n} conserved ${total} != ${n}`);
+  }
+}
+
+// 8. the MAX_VOLLEY cap still holds through volleyShots
+for (const p of Object.values(ATTACK_PATTERNS)) {
+  const shots = volleyShots(p.angles, 3, 100);
+  assert.ok(shots.length <= MAX_VOLLEY, `${p.id} volley breached cap: ${shots.length}`);
 }
 
 console.log("patterns probe OK");
