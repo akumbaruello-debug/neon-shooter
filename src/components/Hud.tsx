@@ -185,6 +185,8 @@ export default function Hud({ hud }: HudProps) {
           <div className="weapon-head">
             <span className="weapon-icon">{WEAPON_GLYPH[hud.weaponId]}</span>
             <span className="weapon-name">{hud.weaponName}</span>
+            <span className="hud-dim">· {hud.patternName}</span>
+            {hud.weaponTier > 0 ? <span className="hud-dim">T{hud.weaponTier}</span> : null}
           </div>
           <div className={`bar bar-energy${hud.heat >= 1 ? " is-hot" : ""}`}>
             <i style={{ width: `${energy * 100}%` }} />

@@ -34,6 +34,14 @@ const QTY_GROWTH = 1.1; // per tier
 const CROWD_TARGETS = 5;
 /** Player power also grows per tier (skills/mastery); assumption for the clear estimate. */
 const REF_DPS_GROWTH_PER_TIER = 1.18;
+/**
+ * Weapon-growth milestone spikes (every 10 player levels). Two stacked per-tier
+ * terms model the combined damage + firepower of the milestone (extra projectile,
+ * +25% dmg, +15% size, +50% bullet speed, new patterns, buffed skills). Tuned so
+ * the reference clear estimate lands inside every stage's target band.
+ */
+const MILESTONE_DPS_PER_TIER = 0.1;
+const MILESTONE_GROWTH_PER_TIER = 0.09;
 const WEAPON_BAND = 0.25; // flag weapons >25% off the mean
 const LEVEL_BAND: [number, number] = [40, 45];
 
@@ -155,9 +163,22 @@ for (const w of weaponRows) {
   }
 }
 
-/** Reference player DPS: mean level-0 single-target DPS, grown per tier. */
+/**
+ * Reference player DPS.
+ *
+ * Baseline: mean level-0 single-target DPS, grown by the stage-tier threat curve.
+ * On top of that, the "weapon growth" feature gives the player a milestone power
+ * spike every 10 levels (+1 projectile tier, +25% damage, +15% size, +50% bullet
+ * speed, plus new attack patterns and buffed skills). The estimator anchors those
+ * spikes to the expected level at the stage so the reference player tracks the
+ * real progression instead of only the stage tier. Milestone tier is capped at 4
+ * (level 40), matching the growth cap.
+ */
 function referenceDps(stage: StageDef): number {
-  return dpsMean * Math.pow(REF_DPS_GROWTH_PER_TIER, stage.tier);
+  const level = expectedLevelAtStage(stage.stage);
+  const milestoneTier = Math.min(4, Math.floor(level / 10));
+  const milestoneFactor = (1 + MILESTONE_DPS_PER_TIER * milestoneTier) * (1 + MILESTONE_GROWTH_PER_TIER * milestoneTier);
+  return dpsMean * Math.pow(REF_DPS_GROWTH_PER_TIER, stage.tier) * milestoneFactor;
 }
 
 // ------------------------------------------------------------------ stages
@@ -413,7 +434,7 @@ if (jsonMode) {
 
   out.push("NEON SHOOTER — BALANCE / TELEMETRY");
   out.push(
-    `hp x${HP_GROWTH}/tier · dmg x${DMG_GROWTH}/tier · qty x${QTY_GROWTH}/tier · ref DPS = ${fmt(dpsMean)} x${REF_DPS_GROWTH_PER_TIER}^tier`,
+    `hp x${HP_GROWTH}/tier · dmg x${DMG_GROWTH}/tier · qty x${QTY_GROWTH}/tier · ref DPS = ${fmt(dpsMean)} x${REF_DPS_GROWTH_PER_TIER}^tier · milestone x(1+${MILESTONE_DPS_PER_TIER}t)(1+${MILESTONE_GROWTH_PER_TIER}t)`,
   );
   out.push("");
 

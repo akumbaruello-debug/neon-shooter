@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type {
+  AttackPatternId,
   BoonCard,
   CardOffer,
   GameOverSummary,
@@ -80,6 +81,8 @@ export interface DebugApi {
   enemyTimeScale(): number;
   drones(): number;
   bulletCounts(): { player: number; enemy: number };
+  setPattern(id: AttackPatternId): void;
+  weaponTier(): number;
 }
 
 export interface OverlayState {
@@ -147,6 +150,7 @@ interface GameHandle {
   togglePause(): void;
   chooseCard(index: number): void;
   reroll(): void;
+  choosePattern(id: AttackPatternId): void;
   chooseWeapon(id: WeaponId): void;
   confirmArmory(): void;
   chooseBoon(index: number): void;
@@ -178,6 +182,7 @@ export interface GameApi {
   togglePause(): void;
   chooseCard(index: number): void;
   reroll(): void;
+  choosePattern(id: AttackPatternId): void;
   chooseWeapon(id: WeaponId): void;
   confirmArmory(): void;
   chooseBoon(index: number): void;
@@ -337,6 +342,9 @@ export function useGame(hostRef: RefObject<HTMLDivElement | null>): GameApi {
     setOverlays((o) => ({ ...o, cards: null }));
   }, []);
   const reroll = useCallback(() => gameRef.current?.reroll(), []);
+  const choosePattern = useCallback((id: AttackPatternId) => {
+    gameRef.current?.choosePattern(id);
+  }, []);
   const chooseWeapon = useCallback((id: WeaponId) => {
     gameRef.current?.chooseWeapon(id);
     setOverlays((o) => ({ ...o, armory: null }));
@@ -384,6 +392,7 @@ export function useGame(hostRef: RefObject<HTMLDivElement | null>): GameApi {
     togglePause,
     chooseCard,
     reroll,
+    choosePattern,
     chooseWeapon,
     confirmArmory,
     chooseBoon,

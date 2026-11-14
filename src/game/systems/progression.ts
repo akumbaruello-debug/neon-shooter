@@ -12,10 +12,13 @@ import { MAX_SKILLS, SKILLS, SKILL_LIST } from "../data/skills";
 import { WEAPONS, WEAPON_LIST } from "../data/weapons";
 import { xpToNext } from "../data/xp";
 import { MAX_STAGES } from "../data/constants";
+import { DEFAULT_PATTERN, PATTERN_LIST } from "../data/patterns";
 import type {
+  AttackPatternId,
   BoonCard,
   CardOffer,
   MasteryCard,
+  PatternCard,
   Role,
   SalvageCard,
   SkillCard,
@@ -40,6 +43,8 @@ export class Progression {
   level = 0;
   xp = 0;
   weaponId: WeaponId = "focus_lance";
+  /** Selected attack pattern (multi-shot geometry); see data/patterns.ts. */
+  pattern: AttackPatternId = DEFAULT_PATTERN;
   skills = new Map<SkillId, number>();
   /** Mastery rank per weapon, scoped to this run. */
   masteryByWeapon = new Map<WeaponId, number>();
@@ -62,6 +67,18 @@ export class Progression {
   repairPerSec = 0;
   graceQueue = 0;
 
+  // Gravity Well: a 3s channel that drags enemies to the ship's nose.
+  gravityTimer = 0;
+  gravityDamage = 0;
+  private gravityHit = new Set<number>();
+
+  // Shockwave: a slow expanding ring that sweeps the arena.
+  shockwaveTimer = 0;
+  shockwaveRadius = 0;
+  shockwaveMaxR = 0;
+  shockwaveDamage = 0;
+  private shockwaveHit = new Set<number>();
+
   private pendingLevelUps = 0;
 
   constructor(private ctx: GameCtx) {}
@@ -70,6 +87,7 @@ export class Progression {
     this.level = 0;
     this.xp = 0;
     this.weaponId = "focus_lance";
+    this.pattern = DEFAULT_PATTERN;
     this.skills.clear();
     this.masteryByWeapon.clear();
     this.rerolls = 2;
@@ -82,6 +100,11 @@ export class Progression {
     this.ionTimer = 0;
     this.repairTimer = 0;
     this.graceQueue = 0;
+    this.gravityTimer = 0;
+    this.gravityHit.clear();
+    this.shockwaveTimer = 0;
+    this.shockwaveRadius = 0;
+    this.shockwaveHit.clear();
     this.pendingLevelUps = 0;
     this.recompute();
   }
@@ -102,6 +125,11 @@ export class Progression {
     return this.masteryByWeapon.get(this.weaponId) ?? 0;
   }
 
+  /** Weapon milestone tier (every 10 levels, capped at 4). */
+  get weaponTier(): number {
+    return Math.min(4, Math.floor(this.level / 10));
+  }
+
   // ------------------------------------------------------------- XP / levels
 
   /** Adds XP, returns how many levels were gained (each triggers a card screen). */
@@ -114,6 +142,8 @@ export class Progression {
       this.level++;
       gained++;
     }
+    // Milestone mods key off the level, so refresh them on every level-up.
+    if (gained > 0) this.recompute();
     return gained;
   }
 
@@ -217,6 +247,13 @@ export class Progression {
     // Phase Barrier reflect is live state; re-apply it so a recompute mid-effect
     // cannot wipe the flag (the reflect lives in active state, not the mods base).
     if (this.barrierTimer > 0 && this.barrierReflect) m.barrierReflect = true;
+
+    // Weapon milestone: every 10 levels the gun grows in power and volume.
+    const t = this.weaponTier;
+    m.damagePct += 25 * t;
+    m.bulletCount += t;
+    m.bulletSizePct += 15 * t;
+    m.bulletSpeedPct += 50 * t;
 
     this.mods = m;
     this.ctx.player.mods = m;
@@ -393,6 +430,18 @@ export class Progression {
     return { offers: pickBoons(() => this.ctx.rng.next(), 3) };
   }
 
+  /** One card per attack pattern, marking the equipped one. */
+  offerPatterns(): PatternCard[] {
+    return PATTERN_LIST.map((p) => ({
+      kind: "pattern",
+      id: p.id,
+      name: p.name,
+      desc: p.desc,
+      color: p.color,
+      equipped: p.id === this.pattern,
+    }));
+  }
+
   hasBoon(id: string): boolean {
     return this.boons.includes(id);
   }
@@ -406,6 +455,10 @@ export class Progression {
   applyWeapon(id: WeaponId): void {
     this.weaponId = id;
     this.recompute();
+  }
+
+  applyPattern(id: AttackPatternId): void {
+    this.pattern = id;
   }
 
   /** Applies a card. Returns false if the offer could not be consumed. */
@@ -440,6 +493,10 @@ export class Progression {
       case "boon": {
         if (!this.boons.includes(card.id)) this.boons.push(card.id);
         this.recompute();
+        return true;
+      }
+      case "pattern": {
+        this.applyPattern(card.id);
         return true;
       }
       default:
@@ -490,7 +547,60 @@ export class Progression {
         this.strikeRandom();
       }
     }
+    if (this.gravityTimer > 0) this.updateGravity(dt);
+    if (this.shockwaveTimer > 0) this.updateShockwave(dt);
     if (this.graceQueue > 0) this.graceQueue -= dt;
+  }
+
+  /** Gravity Well channel: drag nearby enemies to the ship's nose and crush them. */
+  private updateGravity(dt: number): void {
+    this.gravityTimer -= dt;
+    const p = this.ctx.player;
+    const fx = Math.cos(p.angle - Math.PI / 2);
+    const fy = Math.sin(p.angle - Math.PI / 2);
+    const tx = p.x + fx * 46;
+    const ty = p.y + fy * 46;
+    for (const e of pools.enemies.all()) {
+      if (!e.active || e.isBoss) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d > 420) continue;
+      // Pull harder the closer the enemy already is.
+      const k = 1 - Math.min(1, Math.max(0, (d - 40) / 380)) * 0.7;
+      e.x += (tx - e.x) * k * dt * 6;
+      e.y += (ty - e.y) * k * dt * 6;
+      if (this.ctx.rng.next() < 0.06) {
+        this.ctx.particle(e.x, e.y, (tx - e.x) * 2, (ty - e.y) * 2, 0.3, 0xa06bff, 4, "glow");
+      }
+      if (Math.hypot(e.x - tx, e.y - ty) < 34 && !this.gravityHit.has(e.uid)) {
+        this.gravityHit.add(e.uid);
+        this.ctx.aoeDamage(e.x, e.y, 8, this.gravityDamage, 0xa06bff);
+      }
+    }
+    if (this.gravityTimer <= 0) this.gravityHit.clear();
+  }
+
+  /** Shockwave: a slow expanding ring that damages and clears bullets as it passes. */
+  private updateShockwave(dt: number): void {
+    const p = this.ctx.player;
+    const prev = this.shockwaveRadius;
+    this.shockwaveRadius += 420 * dt;
+    const r = this.shockwaveRadius;
+    for (const e of pools.enemies.all()) {
+      if (!e.active) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d >= prev && d <= r && !this.shockwaveHit.has(e.uid)) {
+        this.shockwaveHit.add(e.uid);
+        this.ctx.aoeDamage(e.x, e.y, 10, this.shockwaveDamage, 0xffff33);
+      }
+    }
+    for (const b of pools.enemyBullets.all()) {
+      if (!b.active) continue;
+      if (Math.hypot(b.x - p.x, b.y - p.y) <= r) pools.enemyBullets.release(b);
+    }
+    if (r >= this.shockwaveMaxR) {
+      this.shockwaveTimer = 0;
+      this.shockwaveHit.clear();
+    }
   }
 
   /** Enemy/bullet time scale from Chrono Slip. */
@@ -514,15 +624,13 @@ export class Progression {
     const p = this.ctx.player;
     switch (id) {
       case "shockwave": {
-        this.ctx.burst(p.x, p.y, 0x5af0ff, 40, { speed: 900, life: 0.5, size: 8 });
-        this.ctx.shake(10);
-        const radius = 260 + lvl * 40;
-        this.ctx.aoeDamage(p.x, p.y, radius, value, 0x5af0ff);
-        // Erase enemy bullets inside the ring.
-        for (const b of pools.enemyBullets.all()) {
-          if (!b.active) continue;
-          if (Math.hypot(b.x - p.x, b.y - p.y) <= radius) pools.enemyBullets.release(b);
-        }
+        this.shockwaveTimer = 1;
+        this.shockwaveMaxR = 260 + lvl * 40;
+        this.shockwaveDamage = value;
+        this.shockwaveRadius = 0;
+        this.shockwaveHit.clear();
+        this.ctx.particle(p.x, p.y, 0, 0, 1.1, 0xffff33, 24, "ring", this.shockwaveMaxR);
+        this.ctx.shake(8);
         break;
       }
       case "nano_repair": {
@@ -549,33 +657,27 @@ export class Progression {
           b.y = p.y;
           b.px = p.x;
           b.py = p.y;
-          b.vx = Math.cos(ang) * 120;
-          b.vy = Math.sin(ang) * 120;
+          b.vx = Math.cos(ang) * 420;
+          b.vy = Math.sin(ang) * 420;
           b.angle = ang;
           b.radius = 7;
           b.damage = 16 * (1 + this.mods.damagePct / 100);
-          b.lifetime = 3;
+          b.lifetime = 5;
           b.age = 0;
           b.color = 0xffd166;
           b.accent = 0xff9f1c;
           b.shape = "missile";
-          b.homing = 5;
+          b.homing = 6;
           b.pierceLeft = 0;
           b.aoe = 0;
         }
         break;
       }
       case "gravity_well": {
-        for (const e of pools.enemies.all()) {
-          if (!e.active || e.isBoss) continue;
-          const d = Math.hypot(e.x - p.x, e.y - p.y);
-          if (d < 420) {
-            const pull = 380 / Math.max(40, d);
-            e.x += (p.x - e.x) * pull * 0.25;
-            e.y += (p.y - e.y) * pull * 0.25;
-          }
-        }
-        this.ctx.aoeDamage(p.x, p.y, 300, value, 0xa06bff);
+        this.gravityTimer = 3;
+        this.gravityDamage = value;
+        this.gravityHit.clear();
+        this.ctx.burst(p.x, p.y, 0xa06bff, 18, { speed: 320, life: 0.4, size: 6 });
         break;
       }
       case "overdrive": {
@@ -608,6 +710,13 @@ export class Progression {
     if (!list.length) return;
     const e = list[this.ctx.rng.int(0, list.length - 1)];
     if (!e) return;
+    // Ion storm: a bright bolt from above the target down to it, then a flash.
+    const L = 150;
+    this.ctx.particle(e.x, e.y - L / 2, 0, 0, 0.22, 0xa0e0ff, L / 3, "trail");
+    for (let i = 0; i < 8; i++) {
+      this.ctx.particle(e.x, e.y - (i / 7) * L, 0, 40, 0.22, 0xa0e0ff, 14 - i, "glow");
+    }
+    this.ctx.particle(e.x, e.y, 0, 0, 0.3, 0xffffff, 34, "glow");
     this.ctx.burst(e.x, e.y, 0xa0e0ff, 10, { speed: 300, life: 0.3, size: 5 });
     this.ctx.aoeDamage(e.x, e.y, 60, this.ionDamage, 0xa0e0ff);
   }

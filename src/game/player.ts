@@ -44,6 +44,12 @@ export interface Mods {
   novaOnLevelup: boolean;
   revive: boolean;
   barrierReflect: boolean;
+  /** Weapon milestone (every 10 levels): extra projectiles per volley. */
+  bulletCount: number;
+  /** Weapon milestone: projectile radius, percent. */
+  bulletSizePct: number;
+  /** Weapon milestone: projectile speed, percent (large). */
+  bulletSpeedPct: number;
 }
 
 export function baseMods(): Mods {
@@ -66,6 +72,9 @@ export function baseMods(): Mods {
     novaOnLevelup: false,
     revive: false,
     barrierReflect: false,
+    bulletCount: 0,
+    bulletSizePct: 0,
+    bulletSpeedPct: 0,
   };
 }
 

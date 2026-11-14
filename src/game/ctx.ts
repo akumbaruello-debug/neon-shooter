@@ -75,7 +75,7 @@ export interface GameCtx {
 
   // --- feedback helpers -----------------------------------------------------
   burst(x: number, y: number, color: number, count: number, opts?: ParticleOpts): void;
-  particle(x: number, y: number, vx: number, vy: number, life: number, color: number, size: number, kind?: ParticleKind): void;
+  particle(x: number, y: number, vx: number, vy: number, life: number, color: number, size: number, kind?: ParticleKind, sizeEnd?: number): void;
   shake(amount: number): void;
   hitstop(seconds: number): void;
   sfx(name: SfxName, opts?: { pan?: number; pitch?: number; volume?: number }): void;

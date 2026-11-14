@@ -76,6 +76,16 @@ function toCardProps(offer: CardOffer, indexKey: string): CardProps {
         lines: [{ label: "", value: offer.desc, tone: "up" }],
         keyHint: indexKey,
       };
+    case "pattern":
+      return {
+        color: offer.color,
+        icon: "\u2739",
+        name: offer.name,
+        tag: offer.equipped ? "EQUIPPED" : "PATTERN",
+        meta: "attack pattern",
+        lines: [{ label: "", value: offer.desc, tone: "up" }],
+        keyHint: indexKey,
+      };
   }
 }
 

@@ -192,7 +192,12 @@ export class StageDirector {
         events.push({ t, kind: req.kind, variant: req.variant, size: req.size, x: p.x, y: p.y });
         if (burst) continue;
         // Smashers get a tight 0.15-0.3s stagger so several never telegraph as a wall.
-        t += forSmasher ? rng.range(0.15, 0.3) : wave.spacing;
+        // Rocks arrive faster than the plan's spacing.
+        t += forSmasher
+          ? rng.range(0.15, 0.3)
+          : req.kind === "rock"
+            ? wave.spacing * 0.7
+            : wave.spacing;
       }
     }
 
@@ -211,7 +216,10 @@ export class StageDirector {
       const y = rng.range(EDGE_MARGIN, ARENA_H - EDGE_MARGIN);
       return this.farFromPlayer(x, y);
     }
-    let x = rng.range(EDGE_MARGIN, ARENA_W - EDGE_MARGIN);
+    // Rocks bias toward the arena's central band; smashers use the full edge.
+    const lo = forSmasher ? EDGE_MARGIN : ARENA_W * 0.28;
+    const hi = forSmasher ? ARENA_W - EDGE_MARGIN : ARENA_W * 0.72;
+    let x = rng.range(lo, hi);
     if (forSmasher) x = this.avoidCorridor(x);
     return this.farFromPlayer(x, SPAWN_Y);
   }

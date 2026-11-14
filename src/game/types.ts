@@ -32,6 +32,9 @@ export type WeaponBehavior =
   | "boomerang" // out-and-back blade
   | "multi" // simultaneous forward/rear/diagonals
 
+/** Named multi-shot geometries. `forward` keeps each weapon's native volley. */
+export type AttackPatternId = "forward" | "twin" | "fan" | "fore_aft" | "radiant";
+
 export interface WeaponDef {
   id: WeaponId;
   name: string;
@@ -178,6 +181,8 @@ export interface BossDef {
   /** Pattern ids used by the boss director. */
   patterns: string[];
   enragePatterns?: string[];
+  /** Flight path while alive (post-intro, pre-death). Defaults to "static". */
+  movement?: "static" | "strafe" | "figure8" | "orbit";
   targetSeconds: number;
 }
 
@@ -284,6 +289,12 @@ export interface HudState {
   kills: number;
   weaponId: WeaponId;
   weaponName: string;
+  /** Selected attack pattern. */
+  patternId: AttackPatternId;
+  /** Selected attack-pattern name (e.g. "Fan"). */
+  patternName: string;
+  /** Weapon milestone tier from the player level (0..4). */
+  weaponTier: number;
   /** Beam/rail heat or charge, 0..1. */
   heat: number;
   dashCooldown: number;
@@ -374,7 +385,16 @@ export interface BoonCard {
   color: number;
 }
 
-export type CardOffer = WeaponCard | SkillCard | MasteryCard | SalvageCard | BoonCard;
+export interface PatternCard {
+  kind: "pattern";
+  id: AttackPatternId;
+  name: string;
+  desc: string;
+  color: number;
+  equipped: boolean;
+}
+
+export type CardOffer = WeaponCard | SkillCard | MasteryCard | SalvageCard | BoonCard | PatternCard;
 
 // ---------------------------------------------------------------- events
 

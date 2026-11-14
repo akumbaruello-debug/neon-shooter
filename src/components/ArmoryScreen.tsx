@@ -1,6 +1,7 @@
 "use client";
 
-import type { HudSkill, Role, WeaponCard, WeaponId } from "@/game/types";
+import type { AttackPatternId, HudSkill, Role, WeaponCard, WeaponId } from "@/game/types";
+import { PATTERN_LIST } from "@/game/data/patterns";
 import Card from "./Card";
 import { WEAPON_GLYPH, hex } from "./uiUtil";
 import { skillIconUrl } from "./skillIcon";
@@ -10,9 +11,12 @@ export interface ArmoryScreenProps {
   rerolls: number;
   /** The player's active skills, straight from the engine (same source as the HUD). */
   skills: HudSkill[];
+  /** The currently equipped attack pattern. */
+  patternId: AttackPatternId;
   onChoose: (id: WeaponId) => void;
   onKeep: () => void;
   onReroll: () => void;
+  onChoosePattern: (id: AttackPatternId) => void;
 }
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -25,9 +29,11 @@ export default function ArmoryScreen({
   offers,
   rerolls,
   skills = [],
+  patternId,
   onChoose,
   onKeep,
   onReroll,
+  onChoosePattern,
 }: ArmoryScreenProps) {
   return (
     <div className="overlay overlay-armory scanlines" role="dialog" aria-label="Armory — choose a weapon">
@@ -63,6 +69,54 @@ export default function ArmoryScreen({
               }}
             />
           ))}
+        </div>
+
+        <div
+          className="armory-patterns"
+          role="list"
+          aria-label="Attack pattern"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "0.5rem",
+            width: "100%",
+          }}
+        >
+          {PATTERN_LIST.map((pattern) => {
+            const equipped = pattern.id === patternId;
+            const color = hex(pattern.color);
+            return (
+              <button
+                key={pattern.id}
+                type="button"
+                className="armory-pattern"
+                title={pattern.desc}
+                aria-pressed={equipped}
+                onClick={() => {
+                  if (!equipped) onChoosePattern(pattern.id);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.35rem 0.65rem",
+                  border: `1px solid ${equipped ? color : "var(--text-dim)"}`,
+                  background: equipped ? "rgba(6, 10, 22, 0.85)" : "rgba(6, 10, 22, 0.4)",
+                  color: equipped ? color : "var(--text)",
+                  cursor: equipped ? "default" : "pointer",
+                  fontWeight: equipped ? 700 : 400,
+                }}
+              >
+                <span className="pattern-name" style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                  {pattern.name}
+                </span>
+                {equipped ? (
+                  <span style={{ color: "var(--text-dim)", fontSize: "0.7rem" }}>EQUIPPED</span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
 
         {skills.length > 0 ? (

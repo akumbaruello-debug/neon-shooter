@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { HudState, SkillId, WeaponId } from "@/game/types";
+import type { AttackPatternId, HudState, SkillId, WeaponId } from "@/game/types";
 import type { DebugApi } from "@/hooks/useGame";
 import { SKILLS } from "@/game/data/skills";
 import { WEAPONS } from "@/game/data/weapons";
+import { PATTERN_LIST } from "@/game/data/patterns";
 
 export interface DebugPanelProps {
   api: DebugApi | null;
@@ -12,8 +13,15 @@ export interface DebugPanelProps {
   onClose: () => void;
 }
 
+/** Attack-pattern + tier hooks the engine build may or may not expose yet. */
+type DevApi = DebugApi & {
+  setPattern(id: AttackPatternId): void;
+  weaponTier(): number;
+};
+
 const WEAPON_IDS = Object.keys(WEAPONS) as WeaponId[];
 const SKILL_IDS = Object.keys(SKILLS) as SkillId[];
+const ROCKS_TO_SPAWN = 10;
 
 /** def ids the engine's spawnEnemy understands. */
 const SPAWN_IDS: { label: string; id: string }[] = [
@@ -33,12 +41,21 @@ export default function DebugPanel({ api, hud, onClose }: DebugPanelProps) {
   const [god, setGod] = useState(false);
   const [timeScale, setTimeScale] = useState(1);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [pattern, setPattern] = useState<AttackPatternId>(PATTERN_LIST[0]?.id ?? "forward");
+  const [skillLevelId, setSkillLevelId] = useState<SkillId>(SKILL_IDS[0] ?? "reinforced_hull");
+  const [skillLevel, setSkillLevel] = useState(1);
+  const [tier, setTier] = useState(0);
+
+  const dev = api as DevApi | null;
 
   useEffect(() => {
     if (!api) return;
-    const id = window.setInterval(() => setStats(api.stats()), 250);
+    const id = window.setInterval(() => {
+      setStats(api.stats());
+      setTier(dev?.weaponTier() ?? 0);
+    }, 250);
     return () => window.clearInterval(id);
-  }, [api]);
+  }, [api, dev]);
 
   const disabled = !api;
   const fps = stats?.fps ?? hud?.fps ?? 0;
@@ -59,6 +76,7 @@ export default function DebugPanel({ api, hud, onClose }: DebugPanelProps) {
         <span>FPS {Math.round(fps)}</span>
         <span>Ent {entities}</span>
         <span>{stats?.phase ?? hud?.stage ?? "—"}</span>
+        <span>Tier {tier}</span>
       </div>
 
       <fieldset disabled={disabled} className="debug-fields">
@@ -148,6 +166,71 @@ export default function DebugPanel({ api, hud, onClose }: DebugPanelProps) {
               api?.setTimeScale(v);
             }}
           />
+        </div>
+
+        <div className="debug-row">
+          <label htmlFor="dbg-pattern">Pattern</label>
+          <select id="dbg-pattern" value={pattern} onChange={(e) => setPattern(e.target.value as AttackPatternId)}>
+            {PATTERN_LIST.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <button type="button" onClick={() => dev?.setPattern(pattern)}>
+            Apply
+          </button>
+        </div>
+
+        <div className="debug-row">
+          <label htmlFor="dbg-skill-level">Skill lvl</label>
+          <select
+            id="dbg-skill-level"
+            value={skillLevelId}
+            onChange={(e) => setSkillLevelId(e.target.value as SkillId)}
+          >
+            {SKILL_IDS.map((id) => (
+              <option key={id} value={id}>
+                {SKILLS[id].name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={skillLevel}
+            onChange={(e) => setSkillLevel(Number(e.target.value))}
+            aria-label="Skill level value"
+          />
+          <button type="button" onClick={() => api?.setSkillLevel(skillLevelId, skillLevel)}>
+            Set
+          </button>
+        </div>
+
+        <div className="debug-row">
+          <span className="debug-group-label">Dev</span>
+          <button type="button" onClick={() => api?.clearEnemies()}>
+            clear enemies
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              for (let i = 0; i < ROCKS_TO_SPAWN; i++) api?.spawnEnemy("rock_normal_medium");
+            }}
+          >
+            spawn 10 rocks
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              api?.godMode(true);
+              setGod(true);
+              api?.setLevel(50);
+            }}
+          >
+            one-shot loadout
+          </button>
         </div>
       </fieldset>
     </div>

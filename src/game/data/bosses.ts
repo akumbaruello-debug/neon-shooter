@@ -74,6 +74,7 @@ export const BOSSES: Record<number, BossDef> = {
       "turret_array",
     ],
     enragePatterns: ["spiral", "bullet_curtain", "multilane_charge"],
+    movement: "figure8",
     targetSeconds: 240,
   },
 };

@@ -33,8 +33,10 @@ import { StageDirector } from "./systems/spawner";
 import { WeaponSystem, DRONE_SHOT_INTERVAL } from "./systems/weapons";
 import { WEAPONS } from "./data/weapons";
 import { SKILLS } from "./data/skills";
+import { getPattern } from "./data/patterns";
 import type {
   ActionName,
+  AttackPatternId,
   CardOffer,
   GameOverSummary,
   GamePhase,
@@ -118,6 +120,8 @@ export interface DebugApi {
   enemyTimeScale(): number;
   drones(): number;
   bulletCounts(): { player: number; enemy: number };
+  setPattern(id: AttackPatternId): void;
+  weaponTier(): number;
 }
 
 type Mode = GamePhase;
@@ -169,6 +173,11 @@ export class Game {
   private reviveAvailable = false;
   private disposed = false;
   private ready: Promise<void>;
+
+  /** Last aim direction (radians) — reused when neither mouse nor movement aims. */
+  private lastAimAngle = -Math.PI / 2;
+  /** Highest weapon milestone tier already announced. */
+  private lastMilestoneTier = 0;
 
   private hudCache: HudState;
 
@@ -263,8 +272,8 @@ export class Game {
       burst(x, y, color, count, opts) {
         self.burst(x, y, color, count, opts);
       },
-      particle(x, y, vx, vy, life, color, size, kind) {
-        self.particle(x, y, vx, vy, life, color, size, kind);
+      particle(x, y, vx, vy, life, color, size, kind, sizeEnd) {
+        self.particle(x, y, vx, vy, life, color, size, kind, sizeEnd);
       },
       shake(amount) {
         self.shakeAmt = Math.max(self.shakeAmt, amount * self.settings.screenShake);
@@ -352,6 +361,7 @@ export class Game {
     color: number,
     size: number,
     kind: ParticleKind = "spark",
+    sizeEnd?: number,
   ): void {
     const p = pools.particles.spawn();
     p.kind = kind;
@@ -362,7 +372,7 @@ export class Game {
     p.life = life;
     p.maxLife = life;
     p.size = size;
-    p.sizeEnd = kind === "smoke" ? size * 2.4 : 0;
+    p.sizeEnd = sizeEnd ?? (kind === "smoke" ? size * 2.4 : 0);
     p.color = color;
     p.alpha = 1;
     p.drag = kind === "smoke" ? 1.6 : 3.2;
@@ -448,6 +458,7 @@ export class Game {
     this.player.reset();
     this.weapons.setWeapon("focus_lance");
     this.progression.applyWeapon("focus_lance");
+    this.weapons.setPattern(this.progression.pattern);
     this.weapons.reset();
     this.enemies.reset();
     this.bosses.reset();
@@ -468,6 +479,7 @@ export class Game {
     this.cardsCooldown = 0;
     this.droneTick = 0;
     this.stageTransition = 0;
+    this.lastMilestoneTier = 0;
 
     this.stage = stage;
     this.mode = countdown ? "countdown" : "playing";
@@ -596,14 +608,46 @@ export class Game {
     const card = offer?.[index];
     if (!card) return;
     this.audio.play("card_select");
-    this.progression.applyCard(card);
-    if (card.kind === "weapon") {
+
+    // First weapon pick -> offer the attack patterns before resuming play.
+    if (card.kind === "weapon" && this.firstWeaponChoice) {
+      this.progression.applyCard(card);
       this.weapons.setWeapon(card.id);
       this.firstWeaponChoice = false;
+      this.lastOffers = null;
+      this.openPatterns();
+      return;
+    }
+
+    if (card.kind === "pattern") {
+      this.progression.applyPattern(card.id);
+      this.weapons.setPattern(card.id);
+    } else {
+      this.progression.applyCard(card);
     }
     this.progression.consumePendingLevelUp();
     this.lastOffers = null;
     this.afterCardPicked();
+  }
+
+  /** Offers the 5 attack patterns right after the first weapon pick. */
+  private openPatterns(): void {
+    this.mode = "cards";
+    this.lastOffers = this.progression.offerPatterns();
+    this.events.emit("cards", {
+      header: "Choose attack pattern",
+      offers: this.lastOffers,
+      rerolls: this.progression.rerolls,
+    });
+    this.emitPhase();
+  }
+
+  /** Re-pick the attack pattern from the armory (offers all patterns). */
+  choosePattern(id: AttackPatternId): void {
+    if (this.mode !== "armory") return;
+    this.progression.applyPattern(id);
+    this.weapons.setPattern(id);
+    this.audio.play("card_select");
   }
 
   private lastOffers: CardOffer[] | null = null;
@@ -828,10 +872,21 @@ export class Game {
 
     const player = this.player;
     const ptr = this.input.pointer;
-    const aimX = ptr.active && this.settings.mouseAim ? ptr.x : player.x;
-    const aimY = ptr.active && this.settings.mouseAim ? ptr.y : player.y - 100;
-
     const axis = this.input.axis();
+    // Aim: mouse when enabled and present, else the movement direction, else the
+    // last aim angle (so a stationary player keeps facing where it last aimed).
+    let aimX: number;
+    let aimY: number;
+    if (this.settings.mouseAim && ptr.active) {
+      aimX = ptr.x;
+      aimY = ptr.y;
+      this.lastAimAngle = Math.atan2(aimY - player.y, aimX - player.x);
+    } else {
+      if (axis.x !== 0 || axis.y !== 0) this.lastAimAngle = Math.atan2(axis.y, axis.x);
+      aimX = player.x + Math.cos(this.lastAimAngle);
+      aimY = player.y + Math.sin(this.lastAimAngle);
+    }
+
     player.update(dt, axis.x, axis.y, aimX, aimY);
 
     // Bullets use the plain (cos,sin) convention toward the cursor. The ship
@@ -868,6 +923,17 @@ export class Game {
     // Audio intensity from how busy the screen is.
     const busy = Math.min(1, (this.enemies.hostileCount() + pools.enemyBullets.activeCount) / 60);
     this.audio.setIntensity(busy);
+
+    // Weapon milestone: every tier adds bullets / damage / speed.
+    if (this.progression.weaponTier > this.lastMilestoneTier) {
+      this.lastMilestoneTier = this.progression.weaponTier;
+      this.events.emit("toast", {
+        text: `WEAPON TIER ${this.lastMilestoneTier} — more bullets / damage / speed`,
+        color: 0xffd166,
+      });
+      this.audio.stinger("levelup");
+      this.burst(player.x, player.y, 0xffd166, 40, { speed: 500, life: 0.6, size: 7 });
+    }
 
     // Level-up queue -> card screen.
     if (this.progression.pending > 0 && this.cardsCooldown <= 0) {
@@ -1049,6 +1115,9 @@ export class Game {
       kills: 0,
       weaponId: "focus_lance",
       weaponName: "Basic Blaster",
+      patternId: "forward",
+      patternName: getPattern("forward").name,
+      weaponTier: 0,
       heat: 0,
       dashCooldown: 0,
       dashCooldownMax: 2,
@@ -1136,6 +1205,9 @@ export class Game {
       kills: this.stats.kills,
       weaponId: this.weapons.weaponId,
       weaponName: WEAPONS[this.weapons.weaponId]?.name ?? "Basic Blaster",
+      patternId: this.progression.pattern,
+      patternName: getPattern(this.progression.pattern).name,
+      weaponTier: this.progression.weaponTier,
       heat: this.weapons.heat,
       dashCooldown: p.dashCooldown,
       dashCooldownMax: 2,
@@ -1325,6 +1397,12 @@ export class Game {
       player: pools.bullets.activeCount,
       enemy: pools.enemyBullets.activeCount,
     }),
+    setPattern: (id) => {
+      this.progression.applyPattern(id);
+      this.weapons.setPattern(id);
+      this.pushHud();
+    },
+    weaponTier: () => this.progression.weaponTier,
   };
 
   // ------------------------------------------------------------------ teardown

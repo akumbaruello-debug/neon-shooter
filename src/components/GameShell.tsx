@@ -152,7 +152,9 @@ export default function GameShell() {
           offers={overlay.armory.offers}
           rerolls={overlay.armory.rerolls}
           skills={overlay.armory.skills}
+          patternId={g.hud?.patternId ?? "forward"}
           onChoose={g.chooseWeapon}
+          onChoosePattern={g.choosePattern}
           onKeep={g.confirmArmory}
           onReroll={g.reroll}
         />

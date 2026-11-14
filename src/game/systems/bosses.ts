@@ -64,6 +64,8 @@ export class BossSystem {
   private deathIdx = 0;
   private heavyCooldown = 0;
   private exposedTimer = 0;
+  /** Seconds spent flying the `movement` path; reset per spawn. */
+  private moveTime = 0;
 
   /** hp snapshot while invulnerable; damage is reverted here. */
   private guardHp = 0;
@@ -101,6 +103,7 @@ export class BossSystem {
     this.deathIdx = 0;
     this.heavyCooldown = 0;
     this.exposedTimer = 0;
+    this.moveTime = 0;
     this.patternId = "";
     this.patternTimer = 0;
     this.patternIdx = -1;
@@ -138,6 +141,7 @@ export class BossSystem {
     this.deathIdx = 0;
     this.heavyCooldown = 0;
     this.exposedTimer = 0;
+    this.moveTime = 0;
     this.patternId = "";
     this.patternTimer = 0;
     this.patternIdx = this.phaseStartIdx(1, def.phases, def.patterns.length) - 1;
@@ -207,6 +211,7 @@ export class BossSystem {
     if (this.heavyCooldown > 0) this.heavyCooldown -= dt;
     if (this.exposedTimer > 0) this.exposedTimer -= dt;
     this.trackNodes();
+    this.stepMovement(dt);
 
     this.patternTimer -= dt;
     this.stepPattern(dt);
@@ -223,6 +228,55 @@ export class BossSystem {
       return;
     }
     this.checkPhase();
+  }
+
+  /**
+   * Continuous flight path for bosses with a `movement` mode (only the final
+   * boss uses one; everyone else defaults to "static" and never moves). Called
+   * only in the active pattern phase — intro/transition/death all return before
+   * this — so it writes nothing but x/y. Smooth, deterministic sin/cos so it
+   * never teleports, and clamped to a safe band clear of the arena edges.
+   *
+   * ponytail: pattern attacks read b.x/b.y live, so they track the boss for
+   * free; add a speed knob here only if the path ever feels too fast.
+   */
+  private stepMovement(dt: number): void {
+    const b = this.current;
+    const mode = b?.bossDef?.movement ?? "static";
+    if (!b || mode === "static") return;
+
+    this.moveTime += dt;
+    const t = this.moveTime;
+
+    // Safe band: inside the walls by a fixed margin, and in the upper playfield.
+    const minX = b.radius + 80;
+    const maxX = ARENA_W - b.radius - 80;
+    const minY = Math.max(140, b.radius);
+    const maxY = Math.min(ARENA_H * 0.42, ARENA_H - b.radius);
+    const cx = (minX + maxX) / 2;
+    const ax = Math.max(0, (maxX - minX) / 2);
+    const cy = (minY + maxY) / 2;
+    const ay = Math.max(0, (maxY - minY) / 2);
+
+    let x = cx;
+    let y = cy;
+    switch (mode) {
+      case "strafe":
+        x = cx + ax * Math.sin(t * 0.9);
+        break;
+      case "orbit":
+        x = cx + ax * Math.cos(t * 0.8);
+        y = cy + ay * Math.sin(t * 0.8);
+        break;
+      case "figure8":
+        x = cx + ax * Math.sin(t * 0.8);
+        y = cy + ay * Math.sin(t * 1.6);
+        break;
+      default:
+        return;
+    }
+    b.x = clamp(x, minX, maxX);
+    b.y = clamp(y, minY, maxY);
   }
 
   // ------------------------------------------------------------- lifecycle
