@@ -5,6 +5,8 @@
  * other sizes is ever needed. Plain Canvas 2D only, no external images.
  */
 
+import type { SkillId, WeaponId } from "../types";
+
 export type Canvas = HTMLCanvasElement;
 
 type Ctx = CanvasRenderingContext2D;
@@ -426,24 +428,24 @@ function pMagnet(ctx: Ctx, color: number): void {
 }
 
 function pHexShield(ctx: Ctx, color: number): void {
-  const hex: P[] = [];
-  for (let i = 0; i < 6; i++) {
-    const a = -Math.PI / 2 + (i / 6) * Math.PI * 2;
-    hex.push([Math.cos(a) * 36, Math.sin(a) * 36]);
-  }
+  // Honeycomb plate (one hex body, three punched cells). Reads as a "matrix"
+  // and no longer shares the pointed-shield silhouette with phase_barrier.
+  const hexAt = (cx: number, cy: number, r: number): void => {
+    const pts: P[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + (i / 6) * Math.PI * 2;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+    }
+    polyPath(ctx, ...pts);
+  };
   glowOn(ctx, color, 10);
-  polyPath(ctx, ...hex);
+  hexAt(0, 0, 38);
   fill(ctx, color);
   glowOff(ctx);
-  ctx.beginPath();
-  ctx.moveTo(0, -16);
-  ctx.lineTo(12, -10);
-  ctx.lineTo(12, 4);
-  ctx.quadraticCurveTo(12, 14, 0, 20);
-  ctx.quadraticCurveTo(-12, 14, -12, 4);
-  ctx.lineTo(-12, -10);
-  ctx.closePath();
-  fill(ctx, darken(color, 0.55));
+  for (const [cx, cy] of [[-14, -12], [14, -12], [0, 15]] as const) {
+    hexAt(cx, cy, 11);
+    fill(ctx, darken(color, 0.62));
+  }
 }
 
 function pSpikes(ctx: Ctx, color: number): void {
@@ -561,25 +563,27 @@ function pChevrons(ctx: Ctx, color: number): void {
   glowOff(ctx);
 }
 
-function pClock(ctx: Ctx, color: number): void {
-  glowOn(ctx, color, 10);
-  circle(ctx, 0, 0, 34);
+function pHourglass(ctx: Ctx, color: number): void {
+  glowOn(ctx, color, 12);
+  // Frame: two caps + pinched outline. An hourglass reads as "time" and cannot
+  // be mistaken for the stopwatch used by rapid_loader.
+  roundRect(ctx, -30, -43, 60, 7, 3);
   fill(ctx, color);
+  roundRect(ctx, -30, 36, 60, 7, 3);
+  fill(ctx, color);
+  polyPath(ctx, [-26, -35], [26, -35], [4, 0], [26, 35], [-26, 35], [-4, 0]);
+  ctx.strokeStyle = css(color);
+  ctx.lineWidth = 7;
+  ctx.lineJoin = "round";
+  ctx.stroke();
   glowOff(ctx);
-  circle(ctx, 0, 0, 27);
-  fill(ctx, darken(color, 0.55));
-  for (let i = 0; i < 4; i++) {
-    ctx.save();
-    ctx.rotate((i / 4) * Math.PI * 2);
-    roundRect(ctx, -1.6, -24, 3.2, 7, 1.5);
-    fill(ctx, lighten(color, 0.4));
-    ctx.restore();
-  }
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  roundRect(ctx, -2.5, -18, 5, 22, 2);
-  ctx.fill();
-  roundRect(ctx, -2.5, -2, 16, 5, 2);
-  ctx.fill();
+  // Bright sand: upper chamber, falling stream, lower pile.
+  polyPath(ctx, [-17, -30], [17, -30], [3, -5], [-3, -5]);
+  fill(ctx, HI, 0.9);
+  ctx.fillStyle = css(HI, 0.9);
+  ctx.fillRect(-1.7, -7, 3.4, 19);
+  polyPath(ctx, [-15, 31], [15, 31], [5, 11], [-5, 11]);
+  fill(ctx, HI, 0.9);
 }
 
 function pLightning(ctx: Ctx, color: number): void {
@@ -602,7 +606,7 @@ function pLightning(ctx: Ctx, color: number): void {
 
 // --------------------------------------------------------------- registry
 
-const WEAPON_PAINTERS: Record<string, Painter> = {
+const WEAPON_PAINTERS: Record<WeaponId, Painter> = {
   focus_lance: pLance,
   gatling_vulcan: pVulcan,
   rail_charge: pRail,
@@ -617,7 +621,7 @@ const WEAPON_PAINTERS: Record<string, Painter> = {
   crossfire: pCrossfire,
 };
 
-const SKILL_PAINTERS: Record<string, Painter> = {
+const SKILL_PAINTERS: Record<SkillId, Painter> = {
   reinforced_hull: pHull,
   overcharged_rounds: pBullet,
   rapid_loader: pStopwatch,
@@ -634,7 +638,7 @@ const SKILL_PAINTERS: Record<string, Painter> = {
   missile_barrage: pMissiles,
   gravity_well: pVortex,
   overdrive: pLightning,
-  chrono_slip: pClock,
+  chrono_slip: pHourglass,
   ion_storm: pBubble,
 };
 

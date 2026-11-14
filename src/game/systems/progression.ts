@@ -55,6 +55,7 @@ export class Progression {
   chronoTimer = 0;
   chronoFactor = 1;
   barrierTimer = 0;
+  barrierReflect = false;
   ionTimer = 0;
   ionTick = 0;
   repairTimer = 0;
@@ -77,6 +78,7 @@ export class Progression {
     this.overdriveTimer = 0;
     this.chronoTimer = 0;
     this.barrierTimer = 0;
+    this.barrierReflect = false;
     this.ionTimer = 0;
     this.repairTimer = 0;
     this.graceQueue = 0;
@@ -126,7 +128,10 @@ export class Progression {
     const m = baseMods();
     for (const [id, lvl] of this.skills) {
       const def = SKILLS[id];
-      const value = def.levels[Math.min(lvl, 5) - 1]?.value ?? 0;
+      const capped = Math.min(lvl, 5);
+      // Level values are per-level increments; accumulate up to the cap.
+      let value = 0;
+      for (let i = 0; i < capped; i++) value += def.levels[i]?.value ?? 0;
       switch (def.effect) {
         case "max_hull_flat":
           m.maxHullFlat += value;
@@ -150,7 +155,7 @@ export class Progression {
           break;
         case "pickup_radius_pct":
           m.pickupRadiusPct += value;
-          m.xpPct += 10;
+          m.xpPct += 10 * capped;
           break;
         case "shield_flat":
           m.shieldFlat += value;
@@ -209,6 +214,10 @@ export class Progression {
       m.moveSpeedPct += this.overdriveSpeed;
     }
 
+    // Phase Barrier reflect is live state; re-apply it so a recompute mid-effect
+    // cannot wipe the flag (the reflect lives in active state, not the mods base).
+    if (this.barrierTimer > 0 && this.barrierReflect) m.barrierReflect = true;
+
     this.mods = m;
     this.ctx.player.mods = m;
     this.ctx.player.refreshCaps();
@@ -243,15 +252,18 @@ export class Progression {
     const next = cur + 1;
     const from = cur > 0 ? (def.levels[cur - 1]?.desc ?? "") : null;
     const to = def.levels[Math.min(next, 5) - 1]?.desc ?? "";
-    const slot = this.slotsUsed();
-    const keyHint = String(Math.min(slot + 1, MAX_SKILLS));
+    // Key hint: active skills fill the first free slot in `actives` (or their
+    // existing slot on an upgrade); passives have no key.
+    const activeIdx = this.actives.findIndex((a) => a?.id === id);
+    const freeIdx = this.actives.findIndex((a) => a === null);
+    const slot = activeIdx >= 0 ? activeIdx : freeIdx;
+    const keyHint = def.category === "active" && slot >= 0 ? String(slot + 1) : "";
     return {
       kind: "skill",
       id,
       name: def.name,
       category: def.category,
       color: def.color,
-      icon: def.icon,
       level: cur,
       tag: cur === 0 ? "NEW" : "UPGRADE",
       fromDesc: from,
@@ -285,8 +297,14 @@ export class Progression {
     };
   }
 
-  slotsUsed(): number {
-    return this.skills.size;
+  /** Active hotkey slots in use (0..MAX_SKILLS). Passives occupy no slot. */
+  activeSlotsUsed(): number {
+    return this.actives.reduce((n, a) => n + (a ? 1 : 0), 0);
+  }
+
+  /** True while at least one active-skill hotkey slot is free. */
+  hasFreeActiveSlot(): boolean {
+    return this.actives.some((a) => a === null);
   }
 
   /** Weapons offered on the level-1 screen: one per role, always distinct. */
@@ -311,18 +329,24 @@ export class Progression {
   /** Skill / mastery / salvage offers for a level-up. */
   offerSkills(): { header: string; offers: CardOffer[] } {
     const n = this.cardCount();
-    const header = `Skills ${this.slotsUsed()}/${MAX_SKILLS}`;
+    const header = `Skills ${this.activeSlotsUsed()}/${MAX_SKILLS}`;
 
-    // 1. Upgrades of owned, non-maxed skills are always eligible.
-    const upgradable = this.ownedSkills.filter((s) => s.level < 5);
-    // 2. New skills only while a slot is free.
-    const room = this.slotsUsed() < MAX_SKILLS;
-    const unowned = SKILL_LIST.filter((s) => !this.skills.has(s.id));
+    // 1. Upgrades of owned, non-maxed skills are always eligible (an active
+    //    upgrade reuses its existing slot).
+    const upgradable = this.ownedSkills.filter((s) => s.level < 5).map((s) => s.id);
+    // 2. New skills: passives always fit; a new active needs a free hotkey slot.
+    const newPassives = SKILL_LIST.filter(
+      (s) => s.category !== "active" && !this.skills.has(s.id),
+    ).map((s) => s.id);
+    const newActives = this.hasFreeActiveSlot()
+      ? SKILL_LIST.filter((s) => s.category === "active" && !this.skills.has(s.id)).map((s) => s.id)
+      : [];
+    const newSkills = [...newPassives, ...newActives];
 
     const offers: CardOffer[] = [];
     const used = new Set<SkillId>();
 
-    const take = (from: SkillId[]) => {
+    const take = (from: SkillId[]): boolean => {
       const pool = from.filter((id) => !used.has(id));
       if (!pool.length) return false;
       const id = pool[this.ctx.rng.int(0, pool.length - 1)];
@@ -332,12 +356,12 @@ export class Progression {
       return true;
     };
 
-    // Prefer a mix: at least one new skill if there is room and one upgrade if possible.
-    if (room) take(unowned.map((s) => s.id));
-    take(upgradable.map((s) => s.id));
+    // Prefer a mix: at least one new skill if any is eligible, plus one upgrade.
+    if (newSkills.length) take(newSkills);
+    take(upgradable);
 
     while (offers.length < n) {
-      const filled = take(unowned.map((s) => s.id)) || take(upgradable.map((s) => s.id));
+      const filled = take(newSkills) || take(upgradable);
       if (!filled) break;
     }
 
@@ -393,7 +417,10 @@ export class Progression {
       case "skill": {
         const cur = this.skills.get(card.id) ?? 0;
         if (cur >= 5) return false;
-        if (cur === 0 && this.skills.size >= MAX_SKILLS) return false;
+        // A brand-new ACTIVE needs a free hotkey slot; new passives always fit.
+        if (cur === 0 && SKILLS[card.id].category === "active" && !this.hasFreeActiveSlot()) {
+          return false;
+        }
         this.skills.set(card.id, cur + 1);
         this.recompute();
         if (cur === 0) this.assignActive(card.id);
@@ -449,6 +476,7 @@ export class Progression {
       this.barrierTimer -= dt;
       this.ctx.player.invuln = true;
       this.ctx.player.invulnTimer = Math.max(this.ctx.player.invulnTimer, 0.1);
+      if (this.barrierTimer <= 0) this.barrierReflect = false;
     }
     if (this.repairTimer > 0) {
       this.repairTimer -= dt;
@@ -506,7 +534,8 @@ export class Progression {
         this.barrierTimer = 1.2;
         p.invuln = true;
         p.invulnTimer = 1.2;
-        this.mods.barrierReflect = lvl >= 3;
+        this.barrierReflect = lvl >= 3;
+        this.mods.barrierReflect = this.barrierReflect;
         break;
       }
       case "missile_barrage": {

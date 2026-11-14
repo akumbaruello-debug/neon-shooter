@@ -116,7 +116,7 @@ export interface SkillDef {
   id: SkillId;
   name: string;
   category: SkillCategory;
-  icon: string; // emoji/glyph fallback for the DOM card
+  /** Icon is painted from the skill id (render/icons.ts, typed Record<SkillId, Painter>). */
   color: number;
   /** Effect on the simulation, keyed so the systems can read exact magnitudes. */
   effect:
@@ -255,6 +255,12 @@ export type ActionName =
 export interface HudSkill {
   slot: number;
   id: SkillId;
+  /** Display name, straight from the skills table. */
+  name: string;
+  /** Tint for the painted icon, straight from the skills table. */
+  color: number;
+  /** Live bound key for this slot (from settings.keybindings), e.g. "1" or "Q". */
+  keyLabel: string;
   level: number;
   cooldown: number;
   cooldownMax: number;
@@ -284,10 +290,24 @@ export interface HudState {
   dashCooldownMax: number;
   charge: number; // rail charge 0..1
   skills: HudSkill[];
+  /** Every owned skill (actives + passives) with its level, for the pause/settings roster. */
+  roster: SkillRosterEntry[];
   lowHull: boolean;
   boss: BossHud | null;
   fps: number;
   entities: number;
+}
+
+/** One row of the player's skill roster (settings / pause summary). Passives carry no key. */
+export interface SkillRosterEntry {
+  id: SkillId;
+  name: string;
+  color: number;
+  category: SkillCategory;
+  level: number;
+  /** Bound key for actives; "" for passives. */
+  keyLabel: string;
+  passive: boolean;
 }
 
 export interface BossHud {
@@ -319,12 +339,12 @@ export interface SkillCard {
   name: string;
   category: SkillCategory;
   color: number;
-  icon: string;
   level: number; // current level (0 = new)
   tag: "NEW" | "UPGRADE";
   fromDesc: string | null;
   toDesc: string;
   capstone: string;
+  /** Key of the slot this skill will fill; "" for passives (they have no key). */
   keyHint: string;
   owned: boolean;
 }
