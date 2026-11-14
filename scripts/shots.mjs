@@ -82,6 +82,14 @@ const shots = [
     act: () => window.__ndDebug?.killPlayer?.(),
     after: 2500,
   },
+  {
+    name: "11-fire-aim",
+    url: "/?autostart=1&debug=1&new=1",
+    wait: 12000,
+    fire: true,
+    aim: [1080, 360],
+    after: 3000,
+  },
 ];
 
 const errors = [];
@@ -129,6 +137,16 @@ for (const s of active) {
       await page.waitForTimeout(s.after2 ?? 1500);
     }
     await page.mouse.move(640, 380);
+  }
+  if (s.fire) {
+    const [ax, ay] = s.aim ?? [900, 360];
+    await page.mouse.move(ax, ay);
+    await page.mouse.down();
+    await page.waitForTimeout(s.after ?? 3000);
+    await page.screenshot({ path: join(out, `${s.name}.png`) });
+    await page.mouse.up();
+    console.log("shot", s.name);
+    continue;
   }
   await page.screenshot({ path: join(out, `${s.name}.png`) });
   console.log("shot", s.name);

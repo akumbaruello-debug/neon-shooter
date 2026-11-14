@@ -771,7 +771,9 @@ export class Game {
     const axis = this.input.axis();
     player.update(dt, axis.x, axis.y, aimX, aimY);
 
-    const aimAngle = Math.atan2(aimY - player.y, aimX - player.x) + Math.PI / 2;
+    // Bullets use the plain (cos,sin) convention toward the cursor. The ship
+    // sprite's nose is -Y, so player.angle adds its own +PI/2; do NOT reuse it here.
+    const aimAngle = Math.atan2(aimY - player.y, aimX - player.x);
     const firing = this.settings.autoFire || this.input.isDown("fire") || ptr.down;
     if (!this.settings.autoFire && this.input.isDown("fire")) this.audio.unlock();
     this.weapons.update(dt, firing && player.alive, aimAngle, player.x, player.y);
