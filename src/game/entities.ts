@@ -83,6 +83,12 @@ export interface Enemy {
   active: boolean;
   /** Stable id for homing/pierce bookkeeping. */
   uid: number;
+  /**
+   * Monotonic per-SPAWN identity, bumped on every spawn/reinit (enemies.ts
+   * `init` and `spawnBossShell`). `uid` is unique per pooled OBJECT and survives
+   * release, so channel hit-sets key on this instead (no age heuristic).
+   */
+  spawnId: number;
   kind: EnemyKind;
   defId: string;
   name: string;
@@ -217,6 +223,10 @@ export interface DamageNumber {
 // ------------------------------------------------------------------ factories
 
 let uidCounter = 1;
+let spawnIdCounter = 1;
+
+/** Next monotonic per-spawn identity. Call on EVERY enemy spawn / reinit. */
+export const nextSpawnId = (): number => spawnIdCounter++;
 
 export const makeBullet = (): Bullet => ({
   active: false,
@@ -259,6 +269,7 @@ export const makeBullet = (): Bullet => ({
 export const makeEnemy = (): Enemy => ({
   active: false,
   uid: uidCounter++,
+  spawnId: 0,
   kind: "rock",
   defId: "",
   name: "",

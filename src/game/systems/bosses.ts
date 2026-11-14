@@ -66,6 +66,8 @@ export class BossSystem {
   private exposedTimer = 0;
   /** Seconds spent flying the `movement` path; reset per spawn. */
   private moveTime = 0;
+  private moveStartX = 0;
+  private moveStartY = 0;
 
   /** hp snapshot while invulnerable; damage is reverted here. */
   private guardHp = 0;
@@ -104,6 +106,8 @@ export class BossSystem {
     this.heavyCooldown = 0;
     this.exposedTimer = 0;
     this.moveTime = 0;
+    this.moveStartX = 0;
+    this.moveStartY = 0;
     this.patternId = "";
     this.patternTimer = 0;
     this.patternIdx = -1;
@@ -123,6 +127,10 @@ export class BossSystem {
     e.hp = e.hpMax;
     e.x = ARENA_W / 2;
     e.y = BOSS_Y;
+    // Movement path is anchored here; the first step seeds t=0 onto this
+    // point (see stepMovement) so the intro-end handoff has no discontinuity.
+    this.moveStartX = e.x;
+    this.moveStartY = e.y;
     e.isBoss = true;
     e.bossDef = def;
     e.phase = 1;
@@ -244,6 +252,7 @@ export class BossSystem {
     const b = this.current;
     const mode = b?.bossDef?.movement ?? "static";
     if (!b || mode === "static") return;
+    if (mode !== "strafe" && mode !== "orbit" && mode !== "figure8") return;
 
     this.moveTime += dt;
     const t = this.moveTime;
@@ -254,29 +263,46 @@ export class BossSystem {
     const minY = Math.max(140, b.radius);
     const maxY = Math.min(ARENA_H * 0.42, ARENA_H - b.radius);
     const cx = (minX + maxX) / 2;
-    const ax = Math.max(0, (maxX - minX) / 2);
+    let ax = Math.max(0, (maxX - minX) / 2);
     const cy = (minY + maxY) / 2;
-    const ay = Math.max(0, (maxY - minY) / 2);
+    let ay = Math.max(0, (maxY - minY) / 2);
 
-    let x = cx;
-    let y = cy;
+    // Shrink each amplitude so the translated path fits the band around the
+    // baseline (a hard clamp would flatten the arc ends).
+    // Worst-case excursion of the translated path from the baseline.
+    const spanX = mode === "orbit" ? 2 : 1; // cos-1 ranges -2..0
+    const spanY = 1;
+    ax = Math.min(
+      ax,
+      Math.max(0, Math.min(this.moveStartX - minX, maxX - this.moveStartX) / spanX),
+    );
+    ay = Math.min(
+      ay,
+      Math.max(0, Math.min(this.moveStartY - minY, maxY - this.moveStartY) / spanY),
+    );
+    const [x0, y0] = this.pathPoint(mode, 0, cx, cy, ax, ay);
+    const [px, py] = this.pathPoint(mode, t, cx, cy, ax, ay);
+    b.x = clamp(px - x0 + this.moveStartX, minX, maxX);
+    b.y = clamp(py - y0 + this.moveStartY, minY, maxY);
+  }
+
+  /** Raw path point for `mode` at time `t`, before the baseline offset. */
+  private pathPoint(
+    mode: string,
+    t: number,
+    cx: number,
+    cy: number,
+    ax: number,
+    ay: number,
+  ): [number, number] {
     switch (mode) {
       case "strafe":
-        x = cx + ax * Math.sin(t * 0.9);
-        break;
+        return [cx + ax * Math.sin(t * 0.9), cy];
       case "orbit":
-        x = cx + ax * Math.cos(t * 0.8);
-        y = cy + ay * Math.sin(t * 0.8);
-        break;
-      case "figure8":
-        x = cx + ax * Math.sin(t * 0.8);
-        y = cy + ay * Math.sin(t * 1.6);
-        break;
-      default:
-        return;
+        return [cx + ax * Math.cos(t * 0.8), cy + ay * Math.sin(t * 0.8)];
+      default: // figure8
+        return [cx + ax * Math.sin(t * 0.8), cy + ay * Math.sin(t * 1.6)];
     }
-    b.x = clamp(x, minX, maxX);
-    b.y = clamp(y, minY, maxY);
   }
 
   // ------------------------------------------------------------- lifecycle
@@ -730,6 +756,11 @@ export class BossSystem {
       this.ctx.burst(b.x, b.y, b.accent, 30, { speed: 300, life: 0.5, kind: "glow" });
       b.x = clamp(this.ctx.rng.range(300, ARENA_W - 300), b.radius, ARENA_W - b.radius);
       b.y = clamp(this.ctx.rng.range(160, 460), b.radius, ARENA_H * 0.5);
+      // Re-seed the movement path onto the new position so stepMovement's next
+      // step (t=0 -> baseline) lands here instead of clobbering the jump.
+      this.moveStartX = b.x;
+      this.moveStartY = b.y;
+      this.moveTime = 0;
       this.ctx.burst(b.x, b.y, b.accent, 30, { speed: 300, life: 0.5, kind: "glow" });
       this.setInvuln();
       this.auxTimer = 0.35;

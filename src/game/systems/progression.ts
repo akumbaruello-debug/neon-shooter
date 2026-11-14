@@ -31,6 +31,13 @@ const CARD_COUNT_DEFAULT = 3;
 const CARD_COUNT_L12 = 4;
 const CARD_COUNT_L28 = 5;
 
+// C3: `uid` is stable per pooled OBJECT, not per spawn, so a bare uid set
+// treats a recycled slot as already-hit. `spawnId` is bumped on every spawn /
+// reinit (enemies.ts init + spawnBossShell), so it is true spawn identity.
+function firstHitThisSpawn(hits: Set<number>, e: { spawnId: number }): boolean {
+  return !hits.has(e.spawnId) && (hits.add(e.spawnId), true);
+}
+
 export interface ActiveRuntime {
   id: SkillId;
   level: number;
@@ -507,9 +514,15 @@ export class Progression {
   private assignActive(id: SkillId): void {
     const def = SKILLS[id];
     if (!def.cooldown) return;
+    if (this.actives.some((a) => a?.id === id)) return;
     const slot = this.actives.findIndex((a) => a === null);
     if (slot < 0) return;
     this.actives[slot] = { id, level: 1, cooldown: 0, cooldownMax: def.cooldown, timer: 0 };
+  }
+
+  /** Debug/import helper: ensure an already-unlocked active has a hotkey slot. */
+  ensureActiveSlot(id: SkillId): void {
+    this.assignActive(id);
   }
 
   // ------------------------------------------------------------- active skills
@@ -571,8 +584,7 @@ export class Progression {
       if (this.ctx.rng.next() < 0.06) {
         this.ctx.particle(e.x, e.y, (tx - e.x) * 2, (ty - e.y) * 2, 0.3, 0xa06bff, 4, "glow");
       }
-      if (Math.hypot(e.x - tx, e.y - ty) < 34 && !this.gravityHit.has(e.uid)) {
-        this.gravityHit.add(e.uid);
+      if (Math.hypot(e.x - tx, e.y - ty) < 34 && firstHitThisSpawn(this.gravityHit, e)) {
         this.ctx.aoeDamage(e.x, e.y, 8, this.gravityDamage, 0xa06bff);
       }
     }
@@ -588,8 +600,7 @@ export class Progression {
     for (const e of pools.enemies.all()) {
       if (!e.active) continue;
       const d = Math.hypot(e.x - p.x, e.y - p.y);
-      if (d >= prev && d <= r && !this.shockwaveHit.has(e.uid)) {
-        this.shockwaveHit.add(e.uid);
+      if (d >= prev && d <= r && firstHitThisSpawn(this.shockwaveHit, e)) {
         this.ctx.aoeDamage(e.x, e.y, 10, this.shockwaveDamage, 0xffff33);
       }
     }
@@ -629,7 +640,10 @@ export class Progression {
         this.shockwaveDamage = value;
         this.shockwaveRadius = 0;
         this.shockwaveHit.clear();
-        this.ctx.particle(p.x, p.y, 0, 0, 1.1, 0xffff33, 24, "ring", this.shockwaveMaxR);
+        // C1: same 0 -> maxR sweep as the damage front at 420 px/s, so the
+        // visible ring front and the damage front are the same radius each step.
+        const ringLife = this.shockwaveMaxR / 420;
+        this.ctx.particle(p.x, p.y, 0, 0, ringLife, 0xffff33, 0, "ring", this.shockwaveMaxR);
         this.ctx.shake(8);
         break;
       }

@@ -176,6 +176,8 @@ export class Game {
   private pendingBoons = false;
   private supplyDone = false;
   private cardsCooldown = 0;
+  /** One fixed step where skill hotkeys are ignored after a pick overlay closes. */
+  private skillGuard = 0;
   private droneTick = 0;
   private reviveAvailable = false;
   private disposed = false;
@@ -690,6 +692,7 @@ export class Game {
       this.openCards();
     } else {
       this.mode = "playing";
+      this.skillGuard = 1;
       this.loop.resync();
       this.emitPhase();
     }
@@ -715,26 +718,33 @@ export class Game {
       return;
     }
     this.mode = "playing";
+    this.skillGuard = 1;
     this.loop.resync();
     this.emitPhase();
   }
 
   private openBoons(): void {
     const offer = this.progression.offerBoons();
-    this.mode = "armory"; // reuse the frozen state
+    // Dedicated frozen phase. Reusing "armory" left the ArmoryScreen mounted
+    // under the boons overlay (the shell only clears it when the phase leaves
+    // cards/armory); emitPhase() below triggers that clear.
+    this.mode = "boons";
     this.lastBoons = offer.offers;
     this.events.emit("boons", { offers: offer.offers });
+    this.emitPhase();
   }
 
   private lastBoons: CardOffer[] = [];
 
   chooseBoon(index: number): void {
+    if (this.mode !== "boons") return;
     const card = this.lastBoons[index];
     if (!card) return;
     this.progression.applyCard(card);
     this.audio.play("card_select");
     this.pendingBoons = false;
     this.mode = "playing";
+    this.skillGuard = 1;
     this.loop.resync();
     this.emitPhase();
   }
@@ -854,7 +864,7 @@ export class Game {
       return;
     }
 
-    if (this.mode === "paused" || this.mode === "cards" || this.mode === "armory") {
+    if (this.mode === "paused" || this.mode === "cards" || this.mode === "armory" || this.mode === "boons") {
       // Frozen: still poll the pause key while paused so Esc/P can leave pause
       // (cards/armory must not be resumable this way). Never simulate here.
       if (this.mode === "paused") this.handlePauseKeys();
@@ -920,13 +930,17 @@ export class Game {
       if (player.startDash()) this.audio.play("dash");
     }
 
-    // Active skills 1..5
-    for (let i = 0; i < 5; i++) {
-      if (this.input.justPressed(`skill${i + 1}` as never)) {
-        const a = this.progression.actives[i];
-        if (a && this.progression.activate(i)) this.toastToPlayer(SKILLS[a.id].name);
+    // Active skills 1..5. Skip the first step after a selection overlay closes:
+    // the 1-9 pick key is also a skill key, and Input's window listener may run
+    // before OR after the pick handler, so clearing edges cannot be relied on.
+    if (this.skillGuard > 0) this.skillGuard = 0;
+    else
+      for (let i = 0; i < 5; i++) {
+        if (this.input.justPressed(`skill${i + 1}` as never)) {
+          const a = this.progression.actives[i];
+          if (a && this.progression.activate(i)) this.toastToPlayer(SKILLS[a.id].name);
+        }
       }
-    }
 
     const chrono = this.progression.enemyTimeScale;
     this.enemies.update(dt * chrono);
@@ -1303,6 +1317,7 @@ export class Game {
 
   readonly debug: DebugApi = {
     gotoStage: (n) => {
+      if (!Number.isFinite(n)) return;
       void this.ready.then(() => {
         resetPools();
         this.enterStage(Math.max(1, Math.min(MAX_STAGES, n)));
@@ -1311,6 +1326,7 @@ export class Game {
       });
     },
     setLevel: (n) => {
+      if (!Number.isFinite(n)) return;
       this.progression.level = Math.max(0, n);
       this.progression.recompute();
       // Keep the milestone toast bookkeeping in step with the jump.
@@ -1349,9 +1365,11 @@ export class Game {
       this.spawnEnemyAtPoint(defId, ARENA_W / 2, -60);
     },
     spawnBoss: (stage) => {
+      if (!Number.isFinite(stage)) return;
       this.bosses.spawn(stage);
     },
     setTimeScale: (v) => {
+      if (!Number.isFinite(v)) return;
       this.debugTimeScale = Math.max(0, v);
     },
     stats: () => ({
@@ -1376,13 +1394,14 @@ export class Game {
       invuln: this.player.invuln,
     }),
     setPlayerPos: (x, y) => {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
       this.player.x = x;
       this.player.y = y;
       this.player.vx = 0;
       this.player.vy = 0;
     },
     arena: () => ({ w: ARENA_W, h: ARENA_H }),
-    activateSkill: (slot) => this.progression.activate(slot),
+    activateSkill: (slot) => Number.isInteger(slot) && this.progression.activate(slot),
     skillState: () =>
       this.progression.actives.map((a, slot) => ({
         slot,
@@ -1395,7 +1414,12 @@ export class Game {
     passiveMods: () => ({ ...this.progression.mods }),
     setSkillLevel: (id, level) => {
       // Clamp: an out-of-range level makes skillCard() read past def.levels.
-      this.progression.skills.set(id as SkillId, Math.max(1, Math.min(5, Math.round(level))));
+      if (!Number.isFinite(level) || !(id in SKILLS)) return;
+      const lvl = Math.max(1, Math.min(5, Math.round(level)));
+      this.progression.skills.set(id as SkillId, lvl);
+      // An active skill needs a hotkey slot, or the debug jump leaves it unusable.
+      this.progression.ensureActiveSlot(id as SkillId);
+      for (const a of this.progression.actives) if (a?.id === id) a.level = lvl;
       this.progression.recompute();
     },
     enemyCount: () => pools.enemies.activeCount,
@@ -1405,6 +1429,7 @@ export class Game {
       }
     },
     spawnEnemyAt: (defId, x, y) => {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
       this.spawnEnemyAtPoint(defId, x, y);
     },
     grantSkillCard: (id) => {

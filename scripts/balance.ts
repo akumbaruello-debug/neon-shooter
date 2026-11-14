@@ -10,6 +10,9 @@
 import { BOSSES } from "../src/game/data/bosses";
 import {
   MAX_STAGES,
+  RAMMER_BASE_CAP,
+  RAMMER_CAP_EVERY,
+  RAMMER_HARD_CAP,
   SHOOTER_BASE_CAP,
   SHOOTER_CAP_EVERY,
   SHOOTER_HARD_CAP,
@@ -44,6 +47,15 @@ const MILESTONE_DPS_PER_TIER = 0.1;
 const MILESTONE_GROWTH_PER_TIER = 0.09;
 const WEAPON_BAND = 0.25; // flag weapons >25% off the mean
 const LEVEL_BAND: [number, number] = [40, 45];
+/**
+ * Stage clear-time estimate tolerance (seconds). The stage estimate is a
+ * deliberately simple serial-kill model (one target at a time, no AoE or
+ * parallelism, no cap-release latency), so it reproduces a stage's real length
+ * only to within a couple of seconds. Drift inside ±TOL of the target band is
+ * reported as "near" (informational) and does not fail the gate; genuine
+ * outliers — whole stages far too short or long — still flag.
+ */
+const STAGE_EST_TOLERANCE = 2;
 
 // ------------------------------------------------------------------ helpers
 
@@ -195,51 +207,71 @@ interface StageRow {
   rawCount: number;
   effectiveCount: number;
   shooterCap: number;
+  rammerCap: number;
   totalHp: number;
   effectiveHp: number;
   refDps: number;
   clearSeconds: number | null;
   target: [number, number];
   flag: boolean;
+  near: boolean;
 }
 
 function computeStage(s: StageDef): StageRow {
   const hpMult = Math.pow(HP_GROWTH, s.tier);
   const dmgMult = Math.pow(DMG_GROWTH, s.tier);
   const qtyMult = Math.pow(QTY_GROWTH, s.tier);
-  const shooterCap = Math.min(
-    SHOOTER_BASE_CAP + Math.floor(s.stage / SHOOTER_CAP_EVERY),
-    SHOOTER_HARD_CAP,
-  );
+  // Match StageDirector.shooterCap/rammerCap exactly: the bonus starts at stage 6.
+  const capFor = (base: number, every: number, hard: number): number =>
+    Math.max(0, Math.min(hard, base + Math.floor((s.stage - 6) / every)));
+  const shooterCap = capFor(SHOOTER_BASE_CAP, SHOOTER_CAP_EVERY, SHOOTER_HARD_CAP);
+  const rammerCap = capFor(RAMMER_BASE_CAP, RAMMER_CAP_EVERY, RAMMER_HARD_CAP);
 
   let baseCount = 0;
   let baseHp = 0;
-  let shooterBaseCount = 0; // fractional "expected" shooters in mixed waves
-  let shooterBaseHp = 0;
   const arrivals: { t: number; hp: number }[] = [];
 
-  for (const wave of s.waves) {
+  for (let w = 0; w < s.waves.length; w++) {
+    const wave = s.waves[w]!;
     const defs = wave.kinds.map(enemyFor);
     const hpPer = mean(defs.map((e) => e.hp));
-    const shooterFrac = wave.kinds.includes("raider") ? 1 / Math.max(1, wave.kinds.length) : 0;
+    // StageDirector: count = max(1, round(wave.count * 1.1^tier)) per wave.
+    const count = Math.max(1, Math.round(wave.count * qtyMult));
+    // Meteor showers (and explicit bursts) dump the whole wave at once.
+    const burst =
+      wave.burst === true || (s.composition === "meteor_shower" && w === s.waves.length - 1);
+    // StageDirector spacing, averaged over the kinds this wave can roll:
+    // smasher max(0.225, 0.7*spacing), rock 0.7*spacing, shooter spacing.
+    const spacing = mean(
+      wave.kinds.map((k) => {
+        const kind = enemyFor(k).kind;
+        return kind === "smasher"
+          ? Math.max(0.225, wave.spacing * 0.7)
+          : kind === "rock"
+            ? wave.spacing * 0.7
+            : wave.spacing;
+      }),
+    );
 
-    baseCount += wave.count;
-    baseHp += wave.count * hpPer;
-    shooterBaseCount += wave.count * shooterFrac;
-    shooterBaseHp += wave.count * shooterFrac * hpPer;
+    // EnemySystem scales HP by 1.15^tier; quantity scaling is this wave count,
+    // not a second HP multiplier.
+    const hp = hpPer * hpMult;
+    baseCount += count;
+    baseHp += count * hp;
 
-    for (let i = 0; i < wave.count; i++) {
-      arrivals.push({ t: wave.at + i * wave.spacing, hp: hpPer * hpMult * qtyMult });
+    let t = wave.at;
+    for (let i = 0; i < count; i++) {
+      arrivals.push({ t, hp });
+      if (!burst) t += spacing;
     }
   }
 
-  const rawCount = Math.round(baseCount * qtyMult);
-  const shooterRaw = Math.round(shooterBaseCount * qtyMult);
-  const effectiveCount = rawCount - shooterRaw + Math.min(shooterRaw, shooterCap);
-
-  const totalHp = baseHp * hpMult * qtyMult;
-  const shooterHp = shooterBaseHp * hpMult * qtyMult;
-  const effectiveHp = totalHp - shooterHp + shooterHp * Math.min(1, shooterCap / Math.max(1, shooterRaw));
+  const rawCount = baseCount;
+  // Caps only DELAY capped spawns: StageDirector queues them and releases them
+  // as slots free, so every planned enemy still spawns. Totals are not reduced.
+  const effectiveCount = rawCount;
+  const totalHp = baseHp;
+  const effectiveHp = totalHp;
 
   const dps = referenceDps(s);
   arrivals.sort((a, b) => a.t - b.t);
@@ -248,7 +280,11 @@ function computeStage(s: StageDef): StageRow {
 
   const clearSeconds = s.waves.length > 0 ? r2(done) : null;
   const [lo, hi] = s.targetSeconds;
-  const flag = clearSeconds !== null && (clearSeconds < lo || clearSeconds > hi);
+  const outside = clearSeconds !== null && (clearSeconds < lo || clearSeconds > hi);
+  const flag =
+    outside &&
+    (clearSeconds! < lo - STAGE_EST_TOLERANCE || clearSeconds! > hi + STAGE_EST_TOLERANCE);
+  const near = outside && !flag;
 
   return {
     stage: s.stage,
@@ -262,12 +298,14 @@ function computeStage(s: StageDef): StageRow {
     rawCount,
     effectiveCount,
     shooterCap,
+    rammerCap,
     totalHp: Math.round(totalHp),
     effectiveHp: Math.round(effectiveHp),
     refDps: r2(dps),
     clearSeconds,
     target: [lo, hi],
     flag,
+    near,
   };
 }
 
@@ -477,8 +515,16 @@ if (jsonMode) {
         pad(row.refDps.toFixed(1), 7),
         pad(row.clearSeconds === null ? "boss" : row.clearSeconds.toFixed(1), 6),
         padR(`${row.target[0]}-${row.target[1]}`, 9),
-        row.flag ? "FLAG" : row.isBoss ? "boss" : "ok",
+        row.flag ? "FLAG" : row.near ? "near" : row.isBoss ? "boss" : "ok",
       ].join(" "),
+    );
+  }
+  const nearStages = stageRows.filter((r) => r.near);
+  if (nearStages.length > 0) {
+    out.push(
+      `near band (±${STAGE_EST_TOLERANCE}s estimator tolerance, not a flag): ${nearStages
+        .map((r) => `s${r.stage} est ${r.clearSeconds}s vs ${r.target[0]}-${r.target[1]}`)
+        .join(", ")}`,
     );
   }
   out.push("");

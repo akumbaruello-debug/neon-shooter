@@ -18,7 +18,7 @@ import {
 } from "../data/constants";
 import { ROCKS, SHOOTER, SMASHERS } from "../data/enemies";
 import { clamp, damp, dist2, normalize, TAU } from "../core/math";
-import { pools, type Enemy, type Size3 } from "../entities";
+import { nextSpawnId, pools, type Enemy, type Size3 } from "../entities";
 import type { GameCtx } from "../ctx";
 import type { BossDef, EnemyDef, RockVariant } from "../types";
 
@@ -94,9 +94,18 @@ export class EnemySystem {
       if (
         e.graceLeft <= 0 &&
         p.alive &&
+        p.invulnTimer <= 0 &&
+        p.dashIframe <= 0 &&
         dist2(e.x, e.y, p.x, p.y) <= (e.collisionRadius + p.hitRadius) ** 2
       ) {
         this.ctx.damagePlayer(e.damage, e.name);
+        // The ram landed (player was vulnerable), so consume the rammer/rock
+        // exactly once; it cannot multi-hit. Bosses never reach here (the
+        // `isBoss` continue above). This runs before collisions.enemyContact,
+        // which then sees the player already invulnerable and skips the contact.
+        if (e.kind === "smasher" || e.kind === "rock") {
+          this.damage(e, 999999, false, p.x, p.y);
+        }
       }
     }
   }
@@ -344,6 +353,7 @@ export class EnemySystem {
 
   spawnBossShell(def: BossDef): Enemy {
     const e = pools.enemies.spawn();
+    e.spawnId = nextSpawnId();
     e.kind = "smasher";
     e.defId = def.id;
     e.name = def.name;
@@ -386,6 +396,7 @@ export class EnemySystem {
   }
 
   private init(e: Enemy, def: EnemyDef, size: Size3, x: number, y: number): void {
+    e.spawnId = nextSpawnId();
     e.kind = def.kind;
     e.defId = def.id;
     e.name = def.name;

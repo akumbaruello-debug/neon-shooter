@@ -449,7 +449,7 @@ export const STAGES: StageDef[] = [
       { kinds: ["raider"], count: 5, at: 20, spacing: 1.1 },
       { kinds: ["rock_normal_large"], count: 4, at: 28.2, spacing: 1.67 },
       { kinds: ["breaker_large"], count: 3, at: 37.6, spacing: 1.94 },
-      { kinds: ["raider"], count: 5, at: 50, spacing: 1.0 },
+      { kinds: ["raider"], count: 5, at: 47, spacing: 1.0 },
     ],
   },
   {
@@ -515,7 +515,7 @@ export const STAGES: StageDef[] = [
       { kinds: ["raider"], count: 3, at: 19.2, spacing: 1.0 },
       { kinds: ["rock_metal_large"], count: 3, at: 27.07, spacing: 1.67 },
       { kinds: ["rock_explosive_medium"], count: 4, at: 36.1, spacing: 1.06 },
-      { kinds: ["raider"], count: 6, at: 48, spacing: 0.9 },
+      { kinds: ["raider"], count: 6, at: 44, spacing: 0.9 },
     ],
   },
   {
@@ -574,7 +574,7 @@ export const STAGES: StageDef[] = [
       { kinds: ["breaker_medium"], count: 6, at: 9.96, spacing: 0.97 },
       { kinds: ["breaker_small"], count: 12, at: 19.83, spacing: 0.62 },
       { kinds: ["breaker_medium"], count: 8, at: 29.8, spacing: 0.92 },
-      { kinds: ["breaker_large"], count: 6, at: 39.67, spacing: 1.67 },
+      { kinds: ["breaker_large"], count: 6, at: 38.0, spacing: 1.67 },
     ],
   },
   {

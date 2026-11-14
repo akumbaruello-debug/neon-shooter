@@ -30,12 +30,18 @@ function ringCanvas(dim = 128): HTMLCanvasElement {
   const r = dim / 2;
   const g = ctx.createRadialGradient(r, r, 0, r, r, r);
   g.addColorStop(0, "rgba(255,255,255,0)");
-  g.addColorStop(0.58, "rgba(255,255,255,0)");
-  g.addColorStop(0.78, "rgba(255,255,255,0.95)");
-  g.addColorStop(0.95, "rgba(255,255,255,0.12)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
+  g.addColorStop(0.55, "rgba(255,255,255,0)");
+  g.addColorStop(0.9, "rgba(255,255,255,0.4)");
+  // Bright band peaks at the texture's outer radius, so a ring sprite whose
+  // half-extent is `size` (s.width = size * 2) renders its visible ring at
+  // radius == size. Was 0.78 -> ~22% short for callers treating `size` as radius.
+  g.addColorStop(1, "rgba(255,255,255,0.95)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, dim, dim);
+  // ponytail: clip to the disc — a radial stop can't exceed 1.0, so without a
+  // clip the canvas clamps the outer bright stop and washes the square corners.
+  ctx.beginPath();
+  ctx.arc(r, r, r, 0, Math.PI * 2);
+  ctx.fill();
   return c;
 }
 

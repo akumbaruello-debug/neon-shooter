@@ -386,13 +386,12 @@ export class CollisionSystem {
       }
 
       if (player.invulnTimer > 0 || player.dashIframe > 0) continue;
+      // Contact damage for bosses (the enemy system `continue`s on isBoss) and
+      // any contact it left unresolved. Non-boss rams are consumed in
+      // enemies.ts, which runs first and sets invuln, so this branch normally
+      // only fires for a boss.
       const died = this.applyPlayerHit(player, e.damage, this.sourceName(e));
       this.ctx.burst(e.x, e.y, e.color, 14, { speed: 320, life: 0.3, size: 6 });
-      if (!e.isBoss && (e.kind === "smasher" || e.kind === "rock")) {
-        // Rammers/rocks are consumed by the impact so they cannot multi-hit.
-        // Bosses share kind "smasher" but must survive the ram.
-        this.enemies.damage(e, 999999, false, player.x, player.y);
-      }
       if (died) return;
     }
   }

@@ -10,13 +10,16 @@ import {
   ARENA_H,
   ARENA_W,
   MIN_SPAWN_DIST_FROM_PLAYER,
+  RAMMER_BASE_CAP,
+  RAMMER_CAP_EVERY,
+  RAMMER_HARD_CAP,
   SHOOTER_BASE_CAP,
   SHOOTER_CAP_EVERY,
   SHOOTER_HARD_CAP,
 } from "../data/constants";
 import { getStage } from "../data/stages";
 import type { GameCtx } from "../ctx";
-import type { Size3 } from "../entities";
+import { pools, type Size3 } from "../entities";
 import type { RockVariant, StageDef } from "../types";
 import type { EnemySystem } from "./enemies";
 import { clamp } from "../core/math";
@@ -56,7 +59,6 @@ export class StageDirector {
   private events: SpawnEvent[] = [];
   private cursor = 0;
   private pending: SpawnEvent[] = [];
-  private pendingHead = 0;
   private releaseTimer = 0;
   private elapsed = 0;
   private overtimeSec = 0;
@@ -97,21 +99,22 @@ export class StageDirector {
       this.dispatch(e);
     }
 
-    // Trickle queued shooters out as live slots free up.
+    // Trickle queued shooters / rammers out as live slots free up. Take the first
+    // event whose kind is under its concurrent cap, so a capped kind at the head
+    // cannot block an uncapped kind queued behind it (head-of-line blocking).
     if (this.releaseTimer > 0) this.releaseTimer -= dt;
-    const cap = this.shooterCap();
-    while (
-      this.pendingHead < this.pending.length &&
-      this.enemies.shooterCount() < cap &&
-      this.releaseTimer <= 0
-    ) {
-      const e = this.pending[this.pendingHead]!;
-      this.pendingHead++;
-      this.spawnEvent(e);
+    while (this.releaseTimer <= 0) {
+      const idx = this.pending.findIndex((ev) => {
+        const live = ev.kind === "smasher" ? this.rammerCount() : this.enemies.shooterCount();
+        const cap = ev.kind === "smasher" ? this.rammerCap() : this.shooterCap();
+        return live < cap;
+      });
+      if (idx < 0) break;
+      this.spawnEvent(this.pending.splice(idx, 1)[0]!);
       this.releaseTimer = SHOOTER_RELEASE_DELAY;
     }
 
-    const planDone = this.cursor >= this.events.length && this.pendingHead >= this.pending.length;
+    const planDone = this.cursor >= this.events.length && this.pending.length === 0;
     if (planDone) {
       if (this.enemies.hostileCount() === 0) {
         this.doneFlag = true;
@@ -155,7 +158,6 @@ export class StageDirector {
     this.events = [];
     this.cursor = 0;
     this.pending = [];
-    this.pendingHead = 0;
     this.releaseTimer = 0;
     this.elapsed = 0;
     this.overtimeSec = 0;
@@ -191,10 +193,11 @@ export class StageDirector {
         const p = this.edgePoint(req.kind, forSmasher);
         events.push({ t, kind: req.kind, variant: req.variant, size: req.size, x: p.x, y: p.y });
         if (burst) continue;
-        // Smashers get a tight 0.15-0.3s stagger so several never telegraph as a wall.
-        // Rocks arrive faster than the plan's spacing.
+        // Smashers get a tight 0.15-0.3s stagger so several never telegraph as a wall,
+        // but still honour wave.spacing (0.7x, matching the rock cadence) for wider
+        // stagger in breaker-only waves — never a single burst.
         t += forSmasher
-          ? rng.range(0.15, 0.3)
+          ? Math.max(rng.range(0.15, 0.3), wave.spacing * 0.7)
           : req.kind === "rock"
             ? wave.spacing * 0.7
             : wave.spacing;
@@ -216,11 +219,20 @@ export class StageDirector {
       const y = rng.range(EDGE_MARGIN, ARENA_H - EDGE_MARGIN);
       return this.farFromPlayer(x, y);
     }
-    // Rocks bias toward the arena's central band; smashers use the full edge.
-    const lo = forSmasher ? EDGE_MARGIN : ARENA_W * 0.28;
-    const hi = forSmasher ? ARENA_W - EDGE_MARGIN : ARENA_W * 0.72;
-    let x = rng.range(lo, hi);
-    if (forSmasher) x = this.avoidCorridor(x);
+    // Rocks bias toward the arena's central band via a triangular weight over the
+    // FULL top edge (corners reachable, just rarer); smashers use the full edge flat.
+    const lo = EDGE_MARGIN;
+    const hi = ARENA_W - EDGE_MARGIN;
+    let x: number;
+    if (forSmasher) {
+      x = rng.range(lo, hi);
+      x = this.avoidCorridor(x);
+    } else {
+      // Average of two uniforms → triangular pdf peaked at centre, support [0,1],
+      // so no corner-camping loophole and no hard band.
+      const u = (rng.range(0, 1) + rng.range(0, 1)) / 2;
+      x = lo + u * (hi - lo);
+    }
     return this.farFromPlayer(x, SPAWN_Y);
   }
 
@@ -259,8 +271,30 @@ export class StageDirector {
     );
   }
 
+  /** Never exceed the stage's concurrent rammer (breaker) cap; queue the rest. */
+  private rammerCap(): number {
+    return Math.max(
+      0,
+      Math.min(
+        RAMMER_HARD_CAP,
+        RAMMER_BASE_CAP + Math.floor((this.stageNum - 6) / RAMMER_CAP_EVERY),
+      ),
+    );
+  }
+
+  /** Live rammer count straight off the enemy pool (read-only; no enemies.ts hook). */
+  private rammerCount(): number {
+    let n = 0;
+    for (const e of pools.enemies.all()) if (e.active && e.kind === "smasher") n++;
+    return n;
+  }
+
   private dispatch(e: SpawnEvent): void {
-    if (e.kind === "shooter" && this.enemies.shooterCount() >= this.shooterCap()) {
+    const capped =
+      e.kind === "shooter"
+        ? this.enemies.shooterCount() >= this.shooterCap()
+        : e.kind === "smasher" && this.rammerCount() >= this.rammerCap();
+    if (capped) {
       this.pending.push(e); // released later as slots free up, never dropped
       return;
     }

@@ -59,6 +59,10 @@ export const MIN_SPAWN_DIST_FROM_PLAYER = 350;
 export const SHOOTER_BASE_CAP = 2;
 export const SHOOTER_CAP_EVERY = 8;
 export const SHOOTER_HARD_CAP = 5;
+/** Concurrent breaker (rammer) cap: ~+1 slot per 6 stages, hard ceiling. */
+export const RAMMER_BASE_CAP = 4;
+export const RAMMER_CAP_EVERY = 6;
+export const RAMMER_HARD_CAP = 12;
 
 // --- collation limits ---
 export const MAX_PARTICLES = 1400;

@@ -440,6 +440,7 @@ export type GamePhase =
   | "playing"
   | "cards"
   | "armory"
+  | "boons"
   | "paused"
   | "gameover"
   | "victory";

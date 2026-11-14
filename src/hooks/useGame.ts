@@ -198,6 +198,7 @@ const HUD_PHASES: ReadonlySet<GamePhase> = new Set<GamePhase>([
   "paused",
   "cards",
   "armory",
+  "boons",
 ]);
 
 export function useGame(hostRef: RefObject<HTMLDivElement | null>): GameApi {
@@ -259,9 +260,13 @@ export function useGame(hostRef: RefObject<HTMLDivElement | null>): GameApi {
         inst.events.on("hud", (h) => setHud(h)),
         inst.events.on("phase", (p) => {
           setPhase(p);
-          // Card / armory overlays live only while their phase does.
-          if (p !== "cards" && p !== "armory") {
-            setOverlays((o) => (o.cards || o.armory ? { ...o, cards: null, armory: null } : o));
+          // Card / armory / boon overlays live only while their phase does.
+          if (p !== "cards" && p !== "armory" && p !== "boons") {
+            setOverlays((o) =>
+              o.cards || o.armory || o.boons
+                ? { ...o, cards: null, armory: null, boons: null }
+                : o,
+            );
           }
           // The 3-2-1 overlay must disappear once the countdown ends.
           if (p !== "countdown") {
