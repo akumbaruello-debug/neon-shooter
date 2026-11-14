@@ -32,6 +32,40 @@ const shots = [
     after2: 3000,
   },
   {
+    name: "03b-pick-pattern",
+    url: "/?autostart=1&debug=1&new=1",
+    wait: 3000,
+    act: () => window.__ndDebug?.forceLevelUp?.(),
+    after: 500,
+    check: async (p) => {
+      // Software WebGL runs the countdown in sim time (~4 FPS), so wait for the
+      // card screen to actually appear and unlock before clicking.
+      const ready = () =>
+        p.waitForFunction(
+          () => {
+            const b = document.querySelector(".cards-row > *");
+            return Boolean(b) && !b.disabled;
+          },
+          null,
+          { timeout: 30000 },
+        );
+      await ready();
+      await p.evaluate(() => document.querySelector(".cards-row > *")?.click());
+      await p.waitForFunction(
+        () => /attack pattern/i.test(document.querySelector(".cards-header")?.textContent ?? ""),
+        null,
+        { timeout: 10000 },
+      );
+      const n = await p.locator(".cards-row > *").count();
+      if (n !== 5) return `expected 5 pattern cards, got ${n}`;
+      await p.screenshot({ path: join(out, "03b-pattern-cards.png") });
+      await ready();
+      await p.keyboard.press("1");
+      await p.waitForFunction(() => document.querySelectorAll(".cards-row > *").length === 0, null, { timeout: 10000 });
+      return null;
+    },
+  },
+  {
     name: "04-smasher-telegraph",
     url: "/?autostart=1&debug=1&new=1",
     wait: 3000,
@@ -137,6 +171,10 @@ for (const s of active) {
       await page.waitForTimeout(s.after2 ?? 1500);
     }
     await page.mouse.move(640, 380);
+  }
+  if (s.check) {
+    const msg = await s.check(page);
+    if (msg) errors.push(`[check] ${s.name}: ${msg}`);
   }
   if (s.fire) {
     const [ax, ay] = s.aim ?? [900, 360];

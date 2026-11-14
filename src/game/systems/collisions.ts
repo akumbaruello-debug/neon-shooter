@@ -14,6 +14,16 @@ import type { BossSystem } from "./bosses";
 import type { Progression } from "./progression";
 import type { WeaponSystem } from "./weapons";
 
+/** Shortest distance from point (px,py) to the segment (ax,ay)-(bx,by). */
+function segmentDistance(ax: number, ay: number, bx: number, by: number, px: number, py: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
+
 export class CollisionSystem {
   // ponytail: fixed 4096 bound, not ARENA_W/H (a field initializer would snapshot
   // the arena at construction and go stale on resize). SpatialHash clamps out-of-
@@ -177,13 +187,14 @@ export class CollisionSystem {
       }
 
       // ---- hit enemies
-      const hits = this.grid.query(b.x, b.y, b.radius + 80, this.found);
+      // Swept test: a fast shot (rail/prism, or tier-4 bullet speed) can move
+      // further than a hitbox per step, so test the whole segment it travelled.
+      const step = Math.hypot(b.x - b.px, b.y - b.py);
+      const hits = this.grid.query(b.x, b.y, b.radius + 80 + step, this.found);
       for (const e of hits) {
         if (!e.active || !b.active) continue;
         const rr = e.radius + b.radius;
-        const dx = e.x - b.x;
-        const dy = e.y - b.y;
-        if (dx * dx + dy * dy > rr * rr) continue;
+        if (segmentDistance(b.px, b.py, b.x, b.y, e.x, e.y) > rr) continue;
         if (b.weaponId === "arc_chain") {
           this.chainHit(b, e);
         } else {

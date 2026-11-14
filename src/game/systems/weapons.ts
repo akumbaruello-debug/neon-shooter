@@ -223,6 +223,7 @@ export class WeaponSystem {
         const my = y + Math.sin(aimAngle) * MUZZLE;
         const angles = this.volleyAngles(aimAngle);
         for (const a of angles) {
+          if (this.activeCount() >= (def.maxInFlight ?? 1)) break;
           const b = this.emit(mx, my, a, def.projectileSpeed * this.speedMul, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "disc", pierce, def.knockback);
           b.bounceLeft = def.bounce ?? 0;
           b.spin = 14;
@@ -246,6 +247,7 @@ export class WeaponSystem {
         const my = y + Math.sin(aimAngle) * MUZZLE;
         const angles = this.volleyAngles(aimAngle);
         for (const a of angles) {
+          if (this.activeCount() >= (def.maxInFlight ?? 1)) break;
           const b = this.emit(mx, my, a, def.projectileSpeed * this.speedMul, def.size * this.sizeMul, def.damage * dmgMult, def.color, def.accent, def.lifetime, "blade", pierce, def.knockback);
           b.boomerang = true;
           b.maxDist = def.returnDistance ?? 0;

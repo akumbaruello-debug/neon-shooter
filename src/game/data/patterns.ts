@@ -71,28 +71,99 @@ export const MAX_VOLLEY = 16;
 /** How far a single-shot weapon splays when milestone bullets are added. */
 const SINGLE_SPAN = 0.5;
 
+const norm = (a: number): number => {
+  const x = a % TAU;
+  return x < 0 ? x + TAU : x;
+};
+
+/** Angle difference a→b in [0, TAU). */
+const gapBetween = (a: number, b: number): number => (((b - a) % TAU) + TAU) % TAU;
+
+/**
+ * Normalise + sort the offsets, then rotate so the widest gap becomes the cut
+ * (last) gap. Fans have negative and positive offsets, so the raw wrap point is
+ * arbitrary; after this the sequence is a monotone sweep of the base's real gaps.
+ */
+function cutAtLargestGap(base: number[]): { angles: number[]; gaps: number[] } {
+  const a = base.map(norm).sort((x, y) => x - y);
+  const n = a.length;
+  const at = (i: number): number => a[i] ?? 0;
+  let cut = 0;
+  let cutSize = -1;
+  for (let i = 0; i < n; i++) {
+    const g = gapBetween(at(i), at((i + 1) % n));
+    if (g > cutSize) {
+      cutSize = g;
+      cut = i;
+    }
+  }
+  const startIdx = (cut + 1) % n;
+  const angles = Array.from({ length: n }, (_, i) => at((startIdx + i) % n));
+  const gaps = Array.from({ length: n }, (_, i) => gapBetween(angles[i] ?? 0, angles[(i + 1) % n] ?? 0));
+  return { angles, gaps };
+}
+
+/** Offsets evenly spaced across the span (the cut gap is ignored). */
+function isUniform(base: number[]): boolean {
+  const { gaps } = cutAtLargestGap(base);
+  const first = gaps[0] ?? 0;
+  return gaps.slice(0, -1).every((g) => Math.abs(g - first) < 1e-6);
+}
+
+/**
+ * Keep every original offset and split the widest gaps until `target` is met.
+ * Used for non-uniform geometry (Crossfire's four fixed barrels) so a milestone
+ * can only ever ADD barrels, never replace them.
+ */
+function fillGaps(base: number[], target: number): number[] {
+  const { angles, gaps } = cutAtLargestGap(base);
+  const spans = gaps.length - 1; // the cut gap is never filled
+  const add = new Array<number>(spans).fill(0);
+  for (let k = angles.length; k < target; k++) {
+    let best = 0;
+    for (let i = 1; i < spans; i++) {
+      if ((gaps[i] ?? 0) / ((add[i] ?? 0) + 1) > (gaps[best] ?? 0) / ((add[best] ?? 0) + 1)) best = i;
+    }
+    add[best] = (add[best] ?? 0) + 1;
+  }
+
+  const out: number[] = [];
+  for (let i = 0; i < spans; i++) {
+    const parts = (add[i] ?? 0) + 1;
+    for (let j = 0; j < parts; j++) {
+      out.push(norm((angles[i] ?? 0) + ((gaps[i] ?? 0) * j) / parts));
+    }
+  }
+  out.push(norm(angles[angles.length - 1] ?? 0)); // the far end of the cut
+  return out;
+}
+
 /**
  * Expand a base direction set by `extra` more projectiles.
+ * - `extra <= 0` returns the base untouched (identity — tier 0 must not
+ *   reshape a weapon's native volley).
  * - Single-shot base: splay over a small arc centred on the base angle.
- * - Multi/ring base: evenly resample the span (rings wrap the full circle).
+ * - Uniform base (fan/ring): evenly resample the span (rings wrap).
+ * - Non-uniform base: keep the originals, fill the widest gaps.
  * Capped at MAX_VOLLEY.
  */
 export function expandAngles(base: number[], extra: number): number[] {
-  const n = Math.max(1, Math.min(MAX_VOLLEY, base.length + Math.max(0, Math.floor(extra))));
+  const target = Math.max(1, Math.min(MAX_VOLLEY, base.length + Math.max(0, Math.floor(extra))));
+  if (target === base.length) return base.slice();
   const center = base[0] ?? 0;
   if (base.length <= 1) {
-    if (n <= 1) return [center];
     const out: number[] = [];
-    for (let i = 0; i < n; i++) out.push(center + (i / (n - 1) - 0.5) * SINGLE_SPAN);
+    for (let i = 0; i < target; i++) out.push(center + (i / (target - 1) - 0.5) * SINGLE_SPAN);
     return out;
   }
+  if (!isUniform(base)) return fillGaps(base, target);
   const min = Math.min(...base);
   const max = Math.max(...base);
   const span = max - min;
   const ring = span > Math.PI * 1.5;
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
-    out.push(ring ? min + (i / n) * TAU : min + (i / (n - 1)) * span);
+  for (let i = 0; i < target; i++) {
+    out.push(ring ? min + (i / target) * TAU : min + (i / (target - 1)) * span);
   }
   return out;
 }

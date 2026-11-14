@@ -142,14 +142,15 @@ export default function CardScreen({ header, offers, rerolls, onChoose, onReroll
             type="button"
             className="btn btn-ghost"
             onClick={onReroll}
-            disabled={rerolls <= 0}
+            // Attack patterns are a fixed choice, not a random offer set.
+            disabled={rerolls <= 0 || offers.every((o) => o.kind === "pattern")}
             aria-label={`Reroll, ${rerolls} left`}
           >
             Reroll · {rerolls}
           </button>
         </div>
 
-        <div className="cards-row">
+        <div className={offers.length >= 5 ? "cards-row is-many" : "cards-row"}>
           {offers.map((offer, i) => (
             <Card
               key={`${offer.kind}-${offer.id}-${i}`}

@@ -603,6 +603,10 @@
   position: relative;
   z-index: 1;
   width: min(84rem, 96vw);
+  /* Five-card offers (patterns, L28 skills) can wrap to two rows and exceed
+     a 720p viewport — scroll instead of clipping the overlay. */
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -641,6 +645,11 @@
   color: var(--text-dim);
   letter-spacing: 0.14em;
   font-size: 0.85rem;
+}
+/* Five-card offers (attack patterns, L28 skills) must fit one row on 720p. */
+.cards-row.is-many .card {
+  width: 12rem;
+  height: 18rem;
 }
 .cards-foot {
   display: flex;

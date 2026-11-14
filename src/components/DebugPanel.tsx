@@ -229,7 +229,7 @@ export default function DebugPanel({ api, hud, onClose }: DebugPanelProps) {
               api?.setLevel(50);
             }}
           >
-            one-shot loadout
+            god mode + Lv 50
           </button>
         </div>
       </fieldset>

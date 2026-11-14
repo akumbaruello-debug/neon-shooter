@@ -49,6 +49,13 @@ import type {
   WeaponId,
 } from "./types";
 
+/**
+ * Aim target distance when the ship routes its facing through the movement
+ * axis. Must exceed one frame of travel (max ~9 px) so the post-move angle
+ * derivation can never invert.
+ */
+const AIM_LEAD = 1000;
+
 export interface GameEvents {
   [key: string]: unknown;
   hud: HudState;
@@ -480,6 +487,7 @@ export class Game {
     this.droneTick = 0;
     this.stageTransition = 0;
     this.lastMilestoneTier = 0;
+    this.lastAimAngle = -Math.PI / 2;
 
     this.stage = stage;
     this.mode = countdown ? "countdown" : "playing";
@@ -591,7 +599,7 @@ export class Game {
       this.emitPhase();
       return;
     }
-    const isFirst = this.firstWeaponChoice && this.progression.level <= 1;
+    const isFirst = this.firstWeaponChoice && this.progression.skillCount === 0;
     const offer = isFirst ? this.progression.offerWeapons() : this.progression.offerSkills();
     this.mode = "cards";
     this.cardsCooldown = 0.4;
@@ -648,17 +656,22 @@ export class Game {
     this.progression.applyPattern(id);
     this.weapons.setPattern(id);
     this.audio.play("card_select");
+    // Armory freezes the sim, so nothing else pushes HUD — refresh it here or
+    // the equipped highlight (and its click guard) stays on the old pattern.
+    this.pushHud();
   }
 
   private lastOffers: CardOffer[] | null = null;
 
   reroll(): void {
     if (this.mode !== "cards" && this.mode !== "armory") return;
+    // The attack-pattern screen is a fixed choice, not a random offer set.
+    if (this.lastOffers?.[0]?.kind === "pattern") return;
     if (this.progression.rerolls <= 0) return;
     this.progression.rerolls--;
     this.audio.play("ui_click");
     if (this.mode === "cards") {
-      const isFirst = this.firstWeaponChoice && this.progression.skillCount === 0 && this.progression.level <= 1;
+      const isFirst = this.firstWeaponChoice && this.progression.skillCount === 0;
       const offer = isFirst ? this.progression.offerWeapons() : this.progression.offerSkills();
       this.lastOffers = offer.offers;
       this.events.emit("cards", { header: offer.header, offers: offer.offers, rerolls: this.progression.rerolls });
@@ -787,6 +800,9 @@ export class Game {
     save.setBestStage(MAX_STAGES);
     save.setHighScore(summary.score);
     save.clearCheckpoint();
+    // Tell the shell too: the React `checkpoint` state only updates on this
+    // event, so the title screen would otherwise still offer "Continue".
+    this.events.emit("checkpoint", { stage: 0 });
     this.events.emit("victory", summary);
     this.emitPhase();
   }
@@ -883,8 +899,11 @@ export class Game {
       this.lastAimAngle = Math.atan2(aimY - player.y, aimX - player.x);
     } else {
       if (axis.x !== 0 || axis.y !== 0) this.lastAimAngle = Math.atan2(axis.y, axis.x);
-      aimX = player.x + Math.cos(this.lastAimAngle);
-      aimY = player.y + Math.sin(this.lastAimAngle);
+      // Far target, not 1px: `player.update` moves the ship before the angle is
+      // re-derived from (aim - position), so a near point would flip ~180° as
+      // soon as the ship outruns it.
+      aimX = player.x + Math.cos(this.lastAimAngle) * AIM_LEAD;
+      aimY = player.y + Math.sin(this.lastAimAngle) * AIM_LEAD;
     }
 
     player.update(dt, axis.x, axis.y, aimX, aimY);
@@ -1294,6 +1313,8 @@ export class Game {
     setLevel: (n) => {
       this.progression.level = Math.max(0, n);
       this.progression.recompute();
+      // Keep the milestone toast bookkeeping in step with the jump.
+      this.lastMilestoneTier = this.progression.weaponTier;
       this.pushHud();
     },
     forceLevelUp: () => {
@@ -1373,7 +1394,8 @@ export class Game {
       })),
     passiveMods: () => ({ ...this.progression.mods }),
     setSkillLevel: (id, level) => {
-      this.progression.skills.set(id as SkillId, level);
+      // Clamp: an out-of-range level makes skillCard() read past def.levels.
+      this.progression.skills.set(id as SkillId, Math.max(1, Math.min(5, Math.round(level))));
       this.progression.recompute();
     },
     enemyCount: () => pools.enemies.activeCount,

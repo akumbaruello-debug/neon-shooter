@@ -73,7 +73,6 @@ export default function ArmoryScreen({
 
         <div
           className="armory-patterns"
-          role="list"
           aria-label="Attack pattern"
           style={{
             display: "flex",

@@ -337,9 +337,11 @@ export function useGame(hostRef: RefObject<HTMLDivElement | null>): GameApi {
   const pause = useCallback(() => gameRef.current?.pause(), []);
   const resume = useCallback(() => gameRef.current?.resume(), []);
   const togglePause = useCallback(() => gameRef.current?.togglePause(), []);
+  // No manual overlay clear here: `chooseCard` may emit a NEW `cards` offer
+  // synchronously (first weapon pick -> attack-pattern screen). The engine's
+  // `phase` event already nulls the overlay when it leaves `cards`/`armory`.
   const chooseCard = useCallback((index: number) => {
     gameRef.current?.chooseCard(index);
-    setOverlays((o) => ({ ...o, cards: null }));
   }, []);
   const reroll = useCallback(() => gameRef.current?.reroll(), []);
   const choosePattern = useCallback((id: AttackPatternId) => {
