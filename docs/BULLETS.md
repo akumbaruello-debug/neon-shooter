@@ -17,7 +17,9 @@ fraction of the 64 px sprite box (`lance` .17, `bolt` .24, `diamond` .62,
 `WeaponDef.size`, and the 2/3 is the 1280x720 fit scale (arena 1920x1080,
 uniform `min(1280/1920, 720/1080) = 0.667`). The before column uses
 `SHAPE_SCALE = 1` (the old raw `radius / ref` sprite); shapes whose
-`SHAPE_SCALE` is 1.0 are unchanged.
+`SHAPE_SCALE` is 1.0 are unchanged. These widths are the *base* values; the
+weapon milestone (every 10 levels) additionally scales projectile size and
+speed — see **Weapon milestone** below.
 
 | Weapon | Behaviour | Bullet shape | Colour | Trail? | On-screen size @1280x720 | Before -> after (core px) | Notes |
 |---|---|---|---|---|---|---|---|
@@ -41,6 +43,61 @@ table in `renderer.ts` is what raises them to 4.4 / 3.8 / 3.6 px.
 
 `bulletShape()` collapses to the eight baked shapes only; `beam` renders as
 `lance` and anything unknown renders as `orb`.
+
+## Attack patterns
+
+An attack pattern is a named multi-shot geometry: a set of angle offsets
+(radians, relative to aim) that a volley fires along. There are five
+(`src/game/data/patterns.ts`, `ATTACK_PATTERNS`, typed by `AttackPatternId`), and
+the choice applies to **all twelve weapons** — it reshapes every volley the
+active gun fires.
+
+`forward` is special: it does **not** use a fixed offset list. Instead it fires
+the weapon's own **native volley** — the `count`/`spread` pair from
+`WeaponDef` — so each gun keeps its identity (a shotgun stays a shotgun, a
+single-stream lance stays a single lance). Crossfire's four barrels (forward,
+rear, two diagonals) are part of that native geometry. The other four patterns
+override the geometry with fixed offsets, ignoring `count`/`spread`.
+
+`WeaponSystem.volleyAngles()` builds the per-shot list: it takes the native
+offsets (for `forward`) or the pattern's `angles`, passes them through
+`expandAngles()` (which densifies the list with milestone bullets, capped at
+`MAX_VOLLEY`), and adds `aimAngle`. The pattern is chosen right after the first
+weapon pick and can be re-picked in the Armory.
+
+| Pattern | Shots | Angles (rad, relative to aim) | Colour |
+|---|---|---|---|
+| Forward | weapon's own `count` | native `count`/`spread` fan (Crossfire: 0, π, +0.55, −0.55) | `0x8fa4c0` |
+| Twin | 2 | −0.06, +0.06 | `0x5ad1ff` |
+| Fan | 5 | −0.42, −0.21, 0, +0.21, +0.42 | `0xffd166` |
+| Fore-Aft | 2 | 0, π | `0xff7ad1` |
+| Radiant | 7 | 7 shots evenly over 2π (`i * 2π / 7`) | `0xc45aff` |
+
+The "shots" column is the base count; the weapon milestone's extra projectiles
+(see below) widen it via `expandAngles()` and never exceed `MAX_VOLLEY = 16`.
+
+## Weapon milestone (every 10 levels)
+
+The gun grows with the player's level. Tier is `floor(level / 10)` capped at 4,
+so it steps up at levels 10, 20, 30 and 40. Each tier adds:
+
+- **+1 projectile** per volley (`Mods.bulletCount`)
+- **+25% damage** (`Mods.damagePct`)
+- **+15% projectile size** (`Mods.bulletSizePct`)
+- **+50% projectile speed** (`Mods.bulletSpeedPct`)
+
+`Progression.recompute()` writes these onto the shared `Mods` object every time
+the build changes (level-up included): `damagePct += 25 * t`, `bulletCount += t`,
+`bulletSizePct += 15 * t`, `bulletSpeedPct += 50 * t`, where `t = weaponTier`.
+`WeaponSystem` reads them back as `sizeMul = 1 + bulletSizePct / 100` and
+`speedMul = 1 + bulletSpeedPct / 100`, multiplying every `emit()` call's radius
+and speed (`def.size * sizeMul`, `def.projectileSpeed * speedMul`). Volleys cap
+at `MAX_VOLLEY = 16`, so milestones plus patterns can never exceed 16 projectiles
+per shot.
+
+The HUD shows a `T{n}` badge next to the weapon name from tier 1 upward
+(`Hud.weaponTier`), and each tier change fires a `toast` plus a level-up stinger
+(`game.ts`).
 
 ## Enemy bullets vs player bullets
 

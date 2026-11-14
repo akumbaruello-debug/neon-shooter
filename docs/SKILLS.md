@@ -22,14 +22,14 @@ Skills are either **passive** (folds a value into `Mods` in `recompute()`) or
 | Shield Matrix | Passive (defense) | `pHexShield` (honeycomb hex plate) | — (no key) | `m.shieldFlat += value` | — |
 | Thorn Plating | Passive (defense) | `pSpikes` (10-point spiked star) | — (no key) | `m.thornsDamage += value` | — |
 | Orbital Drones | Passive (offense) | `pDrone` (drone body, orbit ellipse) | — (no key) | `m.drones += value`; `Game.tickDrones()` fires each drone via `WeaponSystem.spawnDroneShot()` | — |
-| Shockwave | Active | `pRingPulse` (concentric rings + 8 spokes) | 1 (slot 1; default; rebindable) | `aoeDamage(radius 260 + level*40, value)`, knockback, `shake(10)`, and releases every enemy bullet inside the radius | 9 s |
+| Shockwave | Active | `pRingPulse` (concentric rings + 8 spokes) | 1 (slot 1; default; rebindable) | Slow expanding yellow ring: radius grows at 420 px/s up to `260 + level*40`, one ring particle grows from 24 px to that max over ~1.1 s; enemies are damaged as the ring passes them (`updateShockwave`, `aoeDamage(10, value)`), enemy bullets are released as it passes; `shake(8)` | 9 s |
 | Nano Repair | Active | `pCross` (plus/cross) | 2 (slot 2; default; rebindable) | Sets `repairTimer = 3` and `repairPerSec = value / 3`; heals that total over 3 s | 16 s |
 | Phase Barrier | Active | `pShield` (pointed shield) | 3 (slot 3; default; rebindable) | `barrierTimer = 1.2`, player invulnerable 1.2 s; at level >= 3 sets `barrierReflect` (enemy bullets inside 90 px are fired back) | 18 s |
-| Missile Barrage | Active | `pMissiles` (three missiles) | 4 (slot 4; default; rebindable) | Spawns `value` homing missiles (`damage = 16 * (1 + damagePct/100)` each, lifetime 3 s) | 12 s |
-| Gravity Well | Active | `pVortex` (three-blade vortex) | 5 (slot 5; default; rebindable) | Pulls non-boss enemies within 420 px toward the player, then `aoeDamage(300, value)` | 15 s |
+| Missile Barrage | Active | `pMissiles` (three missiles) | 4 (slot 4; default; rebindable) | Spawns `value` homing missiles (`damage = 16 * (1 + damagePct/100)` each, speed 420, lifetime 5 s, homing 6) | 12 s |
+| Gravity Well | Active | `pVortex` (three-blade vortex) | 5 (slot 5; default; rebindable) | 3 s channel that drags non-boss enemies within 420 px toward a point ~46 px in front of the ship's nose; enemies that reach ~34 px are crushed via `aoeDamage(8, value)` (`updateGravity`) | 15 s |
 | Overdrive | Active | `pLightning` (lightning bolt) | slot default; rebindable | Sets `overdriveTimer = 4`, `overdriveFireRate = value`, `overdriveSpeed = 10`, then `recompute()` folds fire-rate and move-speed into `Mods` for 4 s | 22 s |
 | Chrono Slip | Active | `pHourglass` (hourglass) | slot default; rebindable | Sets `chronoTimer = 3` and `chronoFactor = value / 100`; `enemyTimeScale` scales enemies, bosses and enemy bullets | 20 s |
-| Ion Storm | Active | `pBubble` (cluster of bubbles) | slot default; rebindable | Sets `ionTimer = 5`; every 0.28 s `strikeRandom()` hits a random enemy with `aoeDamage(60, ionDamage)` | 25 s |
+| Ion Storm | Active | `pBubble` (cluster of bubbles) | slot default; rebindable | Sets `ionTimer = 5`; every 0.28 s `strikeRandom()` draws a visible lightning bolt/flash on the target and hits a random enemy with `aoeDamage(60, ionDamage)` | 25 s |
 
 Notes on the Key column:
 
@@ -57,7 +57,7 @@ column is the data total, not the number used at runtime.
 |---|---|---|
 | Reinforced Hull | 95 (max hull) | At level 5 `recompute()` adds `damageReduction += 0.15` on top of the 95 hull |
 | Overcharged Rounds | 46 (% damage) | No separate branch; the level-5 value (12) is just part of the 46 |
-| Rapid Loader | 42 (% fire rate) | No separate branch; level-5 value (12) is part of the 42 |
+| Rapid Loader | 62 (% fire rate) | No separate branch; level-5 value (18) is part of the 62 |
 | Crit Core | 30 (% crit chance) | At level 5 `recompute()` adds `critDamage += 0.4` |
 | Tungsten Tips | 6 (pierce) | No separate branch; level-5 value (2) is part of the 6 |
 | Thrusters | 36 (% move speed) | No separate branch; dash recharge shortens because `dashCooldown` scales with `moveSpeedPct` |

@@ -3,7 +3,7 @@
 Branch `shooter-overhaul`. Stack: Next.js App Router + TS strict + PixiJS v8 + pixi-filters.
 Old vanilla game preserved in `legacy/` (snapshot commit `f2cf284` on `main`).
 
-## Status: feature-complete, in polish/verification
+## Status: weapon-growth pass complete; still in polish/verification
 
 ### P0 Inspect and plan — DONE
 - git snapshot + `legacy/` move, branch `shooter-overhaul`.
@@ -126,3 +126,18 @@ Proof: `screenshots/hunt/report.json` (0 persisting anomalies, 0 console errors)
   cooldown, level-5 totals + capstones, and the "broken before this pass" list.
 - `docs/BULLETS.md` — the 12 bullet shapes, before→after on-screen widths, trail
   implementation, enemy-vs-player bullet distinction and layer order.
+
+### P6 Weapon growth + gameplay pass — DONE (branch `feat/weapon-growth`)
+- [x] weapon milestone every 10 levels: +1 bullet, +25% dmg, +15% size, +50% bullet speed; tiers 10/20/30/40, cap 4; HUD `T{n}` badge + toast
+- [x] 5 attack patterns (forward/twin/fan/fore_aft/radiant) chosen after the first weapon pick, re-pickable in the Armory, applied to all weapons (`data/patterns.ts`, `WeaponSystem.volleyAngles`)
+- [x] aim follows movement when mouse aim is off (falls back to the last aim angle when stationary)
+- [x] rocks: +40% count, spawn into the central band (28–72% of arena width), 30% tighter stagger
+- [x] smashers: +50% count, added to 25 non-boss stages, slightly faster arrival
+- [x] final boss (stage 50) figure-8 movement, clamped to a safe band; other bosses static
+- [x] Missile Barrage: speed 420, lifetime 5 s, homing 6
+- [x] Gravity Well: 3 s visible pull-channel toward the ship's nose, crushes on arrival
+- [x] Ion Storm: visible lightning bolt + impact flash
+- [x] Shockwave: slow yellow expanding ring (420 px/s), damages as the ring passes, clears enemy bullets
+- [x] Rapid Loader buffed to 10/10/12/12/18 (62% at L5)
+- [x] debug panel: pattern select, weapon-tier readout, skill-level setter, clear-enemies / spawn-10-rocks / one-shot loadout
+- [x] gates: `tsc` clean, `lint` 0/0, `next build` OK, `npm run balance` OK (milestone-aware reference DPS), headless `shots` 0 console errors
