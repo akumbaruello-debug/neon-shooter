@@ -12,6 +12,7 @@ import type {
   CardOffer,
   GameOverSummary,
   GamePhase,
+  HudSkill,
   HudState,
   Settings,
   WeaponCard,
@@ -40,11 +41,50 @@ export interface DebugApi {
   forceLevelUp(): void;
   openArmory(): void;
   killPlayer(): void;
+  playerState(): {
+    x: number;
+    y: number;
+    hull: number;
+    hullMax: number;
+    shield: number;
+    shieldMax: number;
+    alive: boolean;
+    invuln: boolean;
+  };
+  setPlayerPos(x: number, y: number): void;
+  arena(): { w: number; h: number };
+  activateSkill(slot: number): boolean;
+  skillState(): {
+    slot: number;
+    id: string;
+    level: number;
+    cooldown: number;
+    cooldownMax: number;
+    active: boolean;
+  }[];
+  passiveMods(): Record<string, number | boolean>;
+  setSkillLevel(id: string, level: number): void;
+  enemyCount(): number;
+  clearEnemies(): void;
+  spawnEnemyAt(defId: string, x: number, y: number): void;
+  grantSkillCard(id: string): void;
+  hudSkills(): {
+    slot: number;
+    id: string;
+    name: string;
+    keyLabel: string;
+    cooldown: number;
+    cooldownMax: number;
+    ready: boolean;
+  }[];
+  enemyTimeScale(): number;
+  drones(): number;
+  bulletCounts(): { player: number; enemy: number };
 }
 
 export interface OverlayState {
   cards: { header: string; offers: CardOffer[]; rerolls: number } | null;
-  armory: { offers: WeaponCard[]; rerolls: number } | null;
+  armory: { offers: WeaponCard[]; rerolls: number; skills: HudSkill[] } | null;
   boons: { offers: BoonCard[] } | null;
   banner: { stage: number; sector: number; title: string } | null;
   bossIntro: { name: string; title: string; stage: number } | null;
@@ -80,7 +120,7 @@ interface EngineEvents {
   hud: HudState;
   phase: GamePhase;
   cards: { header: string; offers: CardOffer[]; rerolls: number };
-  armory: { offers: WeaponCard[]; rerolls: number };
+  armory: { offers: WeaponCard[]; rerolls: number; skills: HudSkill[] };
   boons: { offers: BoonCard[] };
   stageBanner: { stage: number; sector: number; title: string };
   threatUp: { tier: number };

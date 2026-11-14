@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ActionName, Settings } from "@/game/types";
+import type { ActionName, Settings, SkillRosterEntry } from "@/game/types";
 import { normalizeKey } from "./uiUtil";
+import { skillIconUrl } from "./skillIcon";
 
 export type SettingsView = "settings" | "controls";
 
 export interface SettingsMenuProps {
   settings: Settings;
   view?: SettingsView;
+  /** Every owned skill (actives + passives) for the "Your skills" list. */
+  roster?: SkillRosterEntry[];
   onChange: (s: Settings) => void;
   onClose: () => void;
 }
@@ -82,7 +85,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
-export default function SettingsMenu({ settings, view = "settings", onChange, onClose }: SettingsMenuProps) {
+export default function SettingsMenu({ settings, view = "settings", roster = [], onChange, onClose }: SettingsMenuProps) {
   const [capturing, setCapturing] = useState<ActionName | null>(null);
 
   useEffect(() => {
@@ -157,6 +160,54 @@ export default function SettingsMenu({ settings, view = "settings", onChange, on
             <Toggle label="Muted" checked={settings.muted} onChange={(v) => patch({ muted: v })} />
             <Toggle label="Fullscreen" checked={settings.fullscreen} onChange={(v) => patch({ fullscreen: v })} />
             <Toggle label="Mouse aim" checked={settings.mouseAim} onChange={(v) => patch({ mouseAim: v })} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+              <span className="set-label">Your skills</span>
+              {roster.length === 0 ? (
+                <p className="build-empty">No skills yet.</p>
+              ) : (
+                [...roster]
+                  .sort((a, b) =>
+                    a.passive === b.passive
+                      ? a.keyLabel.localeCompare(b.keyLabel, undefined, { numeric: true })
+                      : a.passive
+                        ? 1
+                        : -1,
+                  )
+                  .map((e) => (
+                    <div className="build-skill" key={e.id}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- 96px canvas data URL, no network fetch */}
+                        <img src={skillIconUrl(e.id, e.color)} alt={e.name} style={{ width: "1.25rem", height: "1.25rem" }} />
+                        <span className="build-skill-name">{e.name}</span>
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span className="set-value">Lv {e.level}/5</span>
+                        <span className="build-pips" aria-label={`level ${e.level} of 5`}>
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <i key={i} className={i < e.level ? "on" : ""} />
+                          ))}
+                        </span>
+                        {!e.passive && e.keyLabel ? (
+                          <span
+                            style={{
+                              minWidth: "1.1rem",
+                              padding: "0 0.25rem",
+                              border: "1px solid var(--edge)",
+                              borderRadius: "2px",
+                              fontSize: "0.7rem",
+                              textAlign: "center",
+                              color: "var(--text-dim)",
+                            }}
+                          >
+                            {e.keyLabel}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         ) : (
           <div className="set-body">

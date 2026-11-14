@@ -13,6 +13,8 @@ export interface CardLine {
 export interface CardProps {
   color: number;
   icon?: string;
+  /** Rasterized icon (data URL) from skillIconUrl; takes precedence over `icon`. */
+  iconUrl?: string;
   name: string;
   /** Corner tag, e.g. NEW / UPGRADE / EQUIPPED. */
   tag?: string;
@@ -35,6 +37,7 @@ export interface CardProps {
 export default function Card({
   color,
   icon,
+  iconUrl,
   name,
   tag,
   meta,
@@ -67,7 +70,12 @@ export default function Card({
       <span className="card-bar" aria-hidden="true" />
       {tag ? <span className="card-tag">{tag}</span> : null}
       <span className="card-icon" aria-hidden="true">
-        {icon ?? "◆"}
+        {iconUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- 96px canvas data URL, no network fetch */
+          <img src={iconUrl} alt="" draggable={false} style={{ width: "2.4rem", height: "2.4rem", display: "block" }} />
+        ) : (
+          icon ?? "◆"
+        )}
       </span>
       <span className="card-name">{name}</span>
       {meta ? <span className="card-meta">{meta}</span> : null}

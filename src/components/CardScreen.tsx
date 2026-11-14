@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CardOffer, Role } from "@/game/types";
 import Card, { type CardProps } from "./Card";
 import { WEAPON_GLYPH } from "./uiUtil";
+import { skillIconUrl } from "./skillIcon";
 
 export interface CardScreenProps {
   header: string;
@@ -19,7 +20,7 @@ const ROLE_LABEL: Record<Role, string> = {
   utility: "Utility",
 };
 
-function toCardProps(offer: CardOffer, keyHint: string): CardProps {
+function toCardProps(offer: CardOffer, indexKey: string): CardProps {
   switch (offer.kind) {
     case "weapon":
       return {
@@ -31,19 +32,19 @@ function toCardProps(offer: CardOffer, keyHint: string): CardProps {
         strength: offer.strength,
         weakness: offer.weakness,
         previewRole: offer.role,
-        keyHint,
+        keyHint: indexKey,
       };
     case "skill":
       return {
         color: offer.color,
-        icon: offer.icon,
+        iconUrl: skillIconUrl(offer.id, offer.color),
         name: offer.name,
         tag: offer.tag,
         meta: `${offer.category} · lv ${offer.level}`,
         delta: `${offer.fromDesc ?? "Locked"} → ${offer.toDesc}`,
         capstone: offer.capstone ? `Capstone: ${offer.capstone}` : undefined,
         previewRole: undefined,
-        keyHint,
+        keyHint: offer.keyHint,
       };
     case "mastery":
       return {
@@ -53,7 +54,7 @@ function toCardProps(offer: CardOffer, keyHint: string): CardProps {
         tag: `MASTERY ${offer.rank}`,
         meta: "weapon mastery",
         lines: [{ label: "", value: offer.desc, tone: "up" }],
-        keyHint,
+        keyHint: indexKey,
       };
     case "salvage":
       return {
@@ -63,7 +64,7 @@ function toCardProps(offer: CardOffer, keyHint: string): CardProps {
         tag: "SALVAGE",
         meta: "resource",
         lines: [{ label: "", value: offer.desc, tone: "dim" }],
-        keyHint,
+        keyHint: indexKey,
       };
     case "boon":
       return {
@@ -73,7 +74,7 @@ function toCardProps(offer: CardOffer, keyHint: string): CardProps {
         tag: "LEGENDARY",
         meta: "boon",
         lines: [{ label: "", value: offer.desc, tone: "up" }],
-        keyHint,
+        keyHint: indexKey,
       };
   }
 }

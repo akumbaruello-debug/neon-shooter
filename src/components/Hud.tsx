@@ -2,8 +2,8 @@
 
 import type { CSSProperties } from "react";
 import type { HudState } from "@/game/types";
-import { SKILLS } from "@/game/data/skills";
 import { WEAPON_GLYPH, clamp01, formatTime, hex } from "./uiUtil";
+import { skillIconUrl } from "./skillIcon";
 
 const HULL_SEGMENTS = 24;
 const MAX_SKILL_SLOTS = 5;
@@ -128,17 +128,42 @@ export default function Hud({ hud }: HudProps) {
           if (!skill) {
             return <div className="skill-slot is-empty" key={i} />;
           }
-          const def = SKILLS[skill.id];
           const cdRatio = skill.cooldownMax > 0 ? 1 - clamp01(skill.cooldown / skill.cooldownMax) : 1;
           return (
             <div
               className={`skill-slot${skill.ready ? " is-ready" : ""}`}
               key={i}
-              style={{ "--slot": hex(def.color) } as CSSProperties}
+              style={{ "--slot": hex(skill.color) } as CSSProperties}
             >
-              <Radial className="skill-ring" ratio={cdRatio} size={44} stroke={3} color={hex(def.color)} />
-              <span className="skill-icon">{def.icon}</span>
-              <span className="skill-key">{i + 1}</span>
+              <Radial className="skill-ring" ratio={cdRatio} size={44} stroke={3} color={hex(skill.color)} />
+              {/* eslint-disable-next-line @next/next/no-img-element -- 96px canvas data URL, no network fetch */}
+              <img
+                className="skill-icon"
+                src={skillIconUrl(skill.id, skill.color)}
+                alt={skill.name}
+                draggable={false}
+                style={{ width: "1.5rem", height: "1.5rem" }}
+              />
+              {skill.keyLabel ? <span className="skill-key">{skill.keyLabel}</span> : null}
+              <span
+                className="skill-name"
+                style={{
+                  position: "absolute",
+                  bottom: "0.05rem",
+                  left: 0,
+                  right: 0,
+                  fontSize: "0.48rem",
+                  lineHeight: 1,
+                  textAlign: "center",
+                  letterSpacing: "0.02em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: "var(--text-dim)",
+                }}
+              >
+                {skill.name}
+              </span>
               <span className="skill-pips">
                 {Array.from({ length: 5 }, (_, p) => (
                   <i key={p} className={p < skill.level ? "on" : ""} />

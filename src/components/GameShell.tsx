@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 import { HUD_PHASES, useGame } from "@/hooks/useGame";
-import { SKILLS } from "@/game/data/skills";
 import Hud from "./Hud";
 import TitleScreen from "./TitleScreen";
 import CardScreen from "./CardScreen";
@@ -51,7 +50,6 @@ export default function GameShell() {
   const [soundOn, setSoundOn] = useState(false);
 
   const toggleFullscreen = g.toggleFullscreen;
-  const togglePause = g.togglePause;
   const updateSettings = g.updateSettings;
   const resumeAudio = g.resumeAudio;
   const phase = g.phase;
@@ -73,39 +71,40 @@ export default function GameShell() {
   }, [resumeAudio]);
 
   useEffect(() => {
+    // Capture phase: when a modal is open, consume Esc here so the engine's
+    // (bubble-phase) pause listener never sees it. With no modal open we do
+    // nothing, letting the engine own pause/unpause.
     const onKey = (e: KeyboardEvent): void => {
       if (document.body.dataset.capturing === "1") return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
 
-      if (e.key === "Escape" || e.key === "p" || e.key === "P") {
-        if (modal) {
-          e.preventDefault();
-          setModal(null);
-        } else if (phase === "playing" || phase === "countdown" || phase === "paused") {
-          e.preventDefault();
-          togglePause();
-        }
-      } else if (e.key === "m" || e.key === "M") {
+      if (e.key === "Escape" && modal) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setModal(null);
+        return;
+      }
+
+      if (e.key === "m" || e.key === "M") {
         updateSettings({ ...settings, muted: !settings.muted });
       } else if (e.key === "F11") {
         e.preventDefault();
         toggleFullscreen();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [modal, phase, settings, togglePause, toggleFullscreen, updateSettings]);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [modal, settings, toggleFullscreen, updateSettings]);
 
   const openModal = useCallback((view: SettingsView) => setModal(view), []);
   const closeModal = useCallback(() => setModal(null), []);
 
   const build = useMemo(() => {
-    const skills = (g.hud?.skills ?? []).map((s) => ({
-      name: SKILLS[s.id]?.name ?? s.id,
-      level: s.level,
-    }));
-    return { weaponName: g.hud?.weaponName ?? "—", skills };
+    return {
+      weaponName: g.hud?.weaponName ?? "—",
+      skills: (g.hud?.roster ?? []).map((s) => ({ name: s.name, level: s.level })),
+    };
   }, [g.hud]);
 
   const rootStyle = { "--ui-scale": String(settings.uiScale) } as CSSProperties;
@@ -152,6 +151,7 @@ export default function GameShell() {
         <ArmoryScreen
           offers={overlay.armory.offers}
           rerolls={overlay.armory.rerolls}
+          skills={overlay.armory.skills}
           onChoose={g.chooseWeapon}
           onKeep={g.confirmArmory}
           onReroll={g.reroll}
@@ -184,6 +184,7 @@ export default function GameShell() {
         <SettingsMenu
           settings={settings}
           view={modal}
+          roster={g.hud?.roster ?? []}
           onChange={g.updateSettings}
           onClose={closeModal}
         />
