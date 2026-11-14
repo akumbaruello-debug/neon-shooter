@@ -114,7 +114,15 @@ export type SkillId =
   | "gravity_well"
   | "overdrive"
   | "chrono_slip"
-  | "ion_storm";
+  | "ion_storm"
+  | "ablative_plating"
+  | "vampiric_core"
+  | "capacitor_bank"
+  | "salvage_scanner"
+  | "magnet"
+  | "blink"
+  | "nova"
+  | "emp";
 
 export type SkillCategory = "offense" | "defense" | "utility" | "active";
 
@@ -150,7 +158,15 @@ export interface SkillDef {
     | "active_gravity"
     | "active_overdrive"
     | "active_chrono"
-    | "active_ion";
+    | "active_ion"
+    | "damage_reduction"
+    | "lifesteal"
+    | "shield_recharge_pct"
+    | "xp_pct"
+    | "active_magnet"
+    | "active_blink"
+    | "active_nova"
+    | "active_emp";
   /** Cooldown seconds for active skills. */
   cooldown?: number;
   /** One line per level (index 0 = level 1). Level 5 is the capstone. */

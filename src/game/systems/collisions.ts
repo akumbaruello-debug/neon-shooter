@@ -7,7 +7,7 @@
 import { SpatialHash } from "../core/spatial";
 import type { GameCtx } from "../ctx";
 import { pools, type Bullet, type Enemy } from "../entities";
-import { ARENA_H, ARENA_W, MAGNET_RADIUS, PICKUP_RADIUS } from "../data/constants";
+import { ARENA_H, ARENA_W, MAGNET_MAP_RADIUS, MAGNET_RADIUS, PICKUP_RADIUS } from "../data/constants";
 import type { Player } from "../player";
 import type { EnemySystem } from "./enemies";
 import type { BossSystem } from "./bosses";
@@ -22,6 +22,12 @@ function segmentDistance(ax: number, ay: number, bx: number, by: number, px: num
   if (len2 === 0) return Math.hypot(px - ax, py - ay);
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
   return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
+
+/** Pickup pull radius: map-wide while Magnet is active, else the normal radius. */
+export function pickupMagnetRadius(mapWide: boolean, pickupRadiusPct: number): number {
+  if (mapWide) return MAGNET_MAP_RADIUS;
+  return MAGNET_RADIUS * (1 + pickupRadiusPct / 100);
 }
 
 export class CollisionSystem {
@@ -58,7 +64,7 @@ export class CollisionSystem {
 
   private updatePickups(dt: number, player: Player): void {
     const radius = PICKUP_RADIUS * (1 + player.mods.pickupRadiusPct / 100);
-    const magnet = MAGNET_RADIUS * (1 + player.mods.pickupRadiusPct / 100);
+    const magnet = pickupMagnetRadius(this.progression.magnetTimer > 0, player.mods.pickupRadiusPct);
     for (const pk of pools.pickups.all()) {
       if (!pk.active) continue;
       pk.age += dt;
@@ -211,7 +217,8 @@ export class CollisionSystem {
     this.ctx.stats.damageDealt += dmg;
     this.ctx.stats.hits++;
     this.spark(b, e);
-    if (mods.lifesteal > 0 && this.ctx.rng.next() < 0.02) this.ctx.player.heal(1);
+    // Lifesteal is tiered: each point adds 2% chance per hit (boon = 1 tier).
+    if (mods.lifesteal > 0 && this.ctx.rng.next() < 0.02 * mods.lifesteal) this.ctx.player.heal(1);
     this.enemies.damage(e, dmg, crit, b.x, b.y);
     if (this.ctx.settings.damageNumbers) {
       this.ctx.damageNumber(e.x, e.y - e.radius, String(Math.round(dmg)), crit);

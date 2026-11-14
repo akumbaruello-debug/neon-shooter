@@ -9,6 +9,10 @@
 import {
   ARENA_H,
   ARENA_W,
+  DROP_REPAIR_BASE,
+  DROP_SHIELD_BASE,
+  DROP_STAGE_FALLOFF,
+  DROP_STAGE_FLOOR,
   ENEMY_BULLET,
   ENEMY_HP_MULT,
   HITSTOP_BIG_KILL,
@@ -701,15 +705,18 @@ export class EnemySystem {
   private rollDrop(e: Enemy): void {
     const ctx = this.ctx;
     const missing = 1 - clamp(ctx.player.hull / Math.max(1, ctx.player.hullMax), 0, 1);
+    // Heal/shield drops get rarer the deeper the run goes: the multiplier shrinks
+    // per stage and floors, so supply pressure never fully vanishes.
+    const stageFactor = Math.max(DROP_STAGE_FLOOR, 1 - (ctx.stage - 1) * DROP_STAGE_FALLOFF);
     if (this.sinceRepair >= PITY_REPAIR_MIN_GAP) {
-      const chance = 0.04 + missing * 0.12 + clamp(this.sinceRepair / 60, 0, 1) * 0.1;
+      const chance = (DROP_REPAIR_BASE + missing * 0.12 + clamp(this.sinceRepair / 60, 0, 1) * 0.1) * stageFactor;
       if (ctx.rng.chance(chance)) {
         this.dropPickup("repair", e.x, e.y);
         this.sinceRepair = 0;
         this.lastRepairTime = ctx.runTime;
       }
     }
-    if (ctx.rng.chance(0.05)) this.dropPickup("shield", e.x, e.y);
+    if (ctx.rng.chance(DROP_SHIELD_BASE * stageFactor)) this.dropPickup("shield", e.x, e.y);
   }
 
   private dropPickup(kind: "repair" | "shield", x: number, y: number): void {

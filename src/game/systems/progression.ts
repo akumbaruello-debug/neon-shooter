@@ -11,7 +11,7 @@ import { LEGENDARY_BOONS, pickBoons } from "../data/boons";
 import { MAX_SKILLS, SKILLS, SKILL_LIST } from "../data/skills";
 import { WEAPONS, WEAPON_LIST } from "../data/weapons";
 import { xpToNext } from "../data/xp";
-import { MAX_STAGES } from "../data/constants";
+import { ARENA_H, ARENA_W, MAX_STAGES } from "../data/constants";
 import { DEFAULT_PATTERN, PATTERN_LIST } from "../data/patterns";
 import type {
   AttackPatternId,
@@ -73,6 +73,8 @@ export class Progression {
   repairTimer = 0;
   repairPerSec = 0;
   graceQueue = 0;
+  /** Magnet active: seconds left of whole-map pickup pull (0 = inactive). */
+  magnetTimer = 0;
 
   // Gravity Well: a 3s channel that drags enemies to the ship's nose.
   gravityTimer = 0;
@@ -107,6 +109,7 @@ export class Progression {
     this.ionTimer = 0;
     this.repairTimer = 0;
     this.graceQueue = 0;
+    this.magnetTimer = 0;
     this.gravityTimer = 0;
     this.gravityHit.clear();
     this.shockwaveTimer = 0;
@@ -202,6 +205,18 @@ export class Progression {
           break;
         case "drones":
           m.drones += value;
+          break;
+        case "damage_reduction":
+          m.damageReduction += value;
+          break;
+        case "lifesteal":
+          m.lifesteal += value;
+          break;
+        case "shield_recharge_pct":
+          m.shieldRechargePct += value;
+          break;
+        case "xp_pct":
+          m.xpPct += value;
           break;
         default:
           break;
@@ -562,6 +577,7 @@ export class Progression {
     }
     if (this.gravityTimer > 0) this.updateGravity(dt);
     if (this.shockwaveTimer > 0) this.updateShockwave(dt);
+    if (this.magnetTimer > 0) this.magnetTimer -= dt;
     if (this.graceQueue > 0) this.graceQueue -= dt;
   }
 
@@ -712,8 +728,56 @@ export class Progression {
         this.ionDamage = value;
         break;
       }
+      case "magnet": {
+        this.magnetTimer = Math.max(this.magnetTimer, value);
+        this.ctx.burst(p.x, p.y, 0xaa66ff, 16, { speed: 260, life: 0.5, size: 6 });
+        break;
+      }
+      case "blink": {
+        const ang = p.angle - Math.PI / 2;
+        p.x = Math.min(ARENA_W - 40, Math.max(40, p.x + Math.cos(ang) * value));
+        p.y = Math.min(ARENA_H - 40, Math.max(40, p.y + Math.sin(ang) * value));
+        p.vx = 0;
+        p.vy = 0;
+        p.invuln = true;
+        p.invulnTimer = Math.max(p.invulnTimer, 0.5);
+        this.ctx.burst(p.x, p.y, 0x66ffee, 14, { speed: 240, life: 0.4, size: 6 });
+        break;
+      }
+      case "nova": {
+        const radius = 200 + lvl * 40;
+        this.ctx.aoeDamage(p.x, p.y, radius, value, 0xffd166);
+        this.knockbackFrom(p.x, p.y, radius, 520);
+        this.ctx.particle(p.x, p.y, 0, 0, 0.45, 0xffd166, 0, "ring", radius);
+        this.ctx.shake(9);
+        break;
+      }
+      case "emp": {
+        // Instant, whole-arena wipe: erase every enemy bullet, then hit every
+        // enemy in the arena once (distinct from Shockwave's sweeping ring).
+        const cover = Math.hypot(ARENA_W, ARENA_H) + 120;
+        pools.enemyBullets.clear();
+        this.ctx.aoeDamage(p.x, p.y, cover, value, 0x9fd0ff);
+        this.knockbackFrom(p.x, p.y, cover, 260);
+        this.ctx.particle(p.x, p.y, 0, 0, 0.5, 0x9fd0ff, 0, "ring", cover);
+        this.ctx.shake(10);
+        break;
+      }
       default:
         break;
+    }
+  }
+
+  /** Radial impulse to non-boss enemies inside `radius` (Nova / EMP). */
+  private knockbackFrom(x: number, y: number, radius: number, power: number): void {
+    for (const e of pools.enemies.all()) {
+      if (!e.active || e.isBoss) continue;
+      const dx = e.x - x;
+      const dy = e.y - y;
+      const d = Math.hypot(dx, dy);
+      if (d > radius) continue;
+      e.vx += (dx / (d || 1)) * power;
+      e.vy += (dy / (d || 1)) * power;
     }
   }
 

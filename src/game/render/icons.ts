@@ -640,6 +640,14 @@ const SKILL_PAINTERS: Record<SkillId, Painter> = {
   overdrive: pLightning,
   chrono_slip: pHourglass,
   ion_storm: pBubble,
+  ablative_plating: pHexShield,
+  vampiric_core: pCross,
+  capacitor_bank: pShield,
+  salvage_scanner: pBullet,
+  magnet: pMagnet,
+  blink: pChevrons,
+  nova: pRingPulse,
+  emp: pLightning,
 };
 
 const ALIAS: Record<string, string> = {

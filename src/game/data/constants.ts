@@ -52,6 +52,12 @@ export const LOW_HULL_FRACTION = 0.3;
 
 export const PICKUP_RADIUS = 46; // generous
 export const MAGNET_RADIUS = 210;
+/**
+ * Map-wide pull radius while the Magnet active skill is up. Must exceed the
+ * arena diagonal at any allowed width (max ARENA_W 4096, ARENA_H 1080 ->
+ * hypot ~4236), so 6000 covers every possible arena.
+ */
+export const MAGNET_MAP_RADIUS = 6000;
 
 // --- damage feedback ---
 export const HITSTOP_BIG_KILL = 0.04;
@@ -79,6 +85,16 @@ export const MAX_ENEMIES = 260;
 export const PITY_REPAIR_MIN_GAP = 20; // seconds
 export const STAGE_CLEAR_HEAL = 0.15;
 export const BOSS_CLEAR_HEAL = 0.4;
+
+// --- drop rarity (Phase 3) ---
+/** Repair-drop base chance per kill (before the pity-timer / missing-hull bonus). */
+export const DROP_REPAIR_BASE = 0.02;
+/** Shield-drop base chance per kill. */
+export const DROP_SHIELD_BASE = 0.022;
+/** Heal/shield drop multiplier shrinks by this per stage above 1. */
+export const DROP_STAGE_FALLOFF = 0.02;
+/** Floor on the stage falloff, so late stages still occasionally drop. */
+export const DROP_STAGE_FLOOR = 0.3;
 
 export const SECTOR_PALETTES = [
   { name: "Verdant Reach", bg0: 0x03040c, bg1: 0x0a1a2a, nebula: 0x1d6b8f, star: 0xa9e8ff, planet: 0x2f6b8f },

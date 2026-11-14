@@ -9,9 +9,10 @@
  *
  * Run: npx tsx scripts/regression.ts   (exit 1 on any failure)
  */
-import { FIXED_DT } from "../src/game/data/constants";
+import { FIXED_DT, ARENA_H, ARENA_W, MAGNET_RADIUS } from "../src/game/data/constants";
 import { ATTACK_PATTERNS, MAX_VOLLEY, expandAngles, volleyShots } from "../src/game/data/patterns";
 import { BOSSES } from "../src/game/data/bosses";
+import { SKILLS } from "../src/game/data/skills";
 import { Rng } from "../src/game/core/rng";
 import { Player } from "../src/game/player";
 import { pools, resetPools } from "../src/game/entities";
@@ -20,6 +21,7 @@ import type { SkillId } from "../src/game/types";
 import { Progression } from "../src/game/systems/progression";
 import { EnemySystem } from "../src/game/systems/enemies";
 import { StageDirector } from "../src/game/systems/spawner";
+import { pickupMagnetRadius } from "../src/game/systems/collisions";
 
 let failed = 0;
 function check(name: string, cond: boolean, extra = ""): void {
@@ -298,6 +300,54 @@ function makeCtx(): { ctx: GameCtx; particles: ParticleCall[]; aoe: { n: number 
     }
   }
   check("(c) forward stays mul 1 across k = 0..3", cOk, cDetail);
+}
+
+// ----------------------------------- (c) Phase 3: magnet + new skills
+{
+  const diag = Math.hypot(ARENA_W, ARENA_H);
+  // While Magnet is active the pull radius covers the whole map, so a pickup at
+  // ANY arena distance is inside the magnet (and thus pulled / collected).
+  check("magnet radius covers the whole map", pickupMagnetRadius(true, 0) >= diag, `r=${pickupMagnetRadius(true, 0)} diag=${diag}`);
+  check(
+    "magnet map-wide at any pickup radius",
+    pickupMagnetRadius(true, 0) >= diag && pickupMagnetRadius(true, 500) >= diag,
+  );
+  check("normal magnet radius === MAGNET_RADIUS", pickupMagnetRadius(false, 0) === MAGNET_RADIUS);
+  check(
+    "normal magnet radius scales with pickup pct",
+    close(pickupMagnetRadius(false, 100), MAGNET_RADIUS * 2),
+    `r=${pickupMagnetRadius(false, 100)}`,
+  );
+
+  const newActives = ["magnet", "blink", "nova", "emp"] as const;
+  const newPassives = ["ablative_plating", "vampiric_core", "capacitor_bank", "salvage_scanner"] as const;
+  const effects = new Set<string>([
+    "active_magnet",
+    "active_blink",
+    "active_nova",
+    "active_emp",
+    "damage_reduction",
+    "lifesteal",
+    "shield_recharge_pct",
+    "xp_pct",
+  ]);
+  for (const id of newActives) {
+    const d = SKILLS[id];
+    check(
+      `active ${id}: category active + finite cooldown`,
+      !!d && d.category === "active" && Number.isFinite(d.cooldown ?? NaN),
+    );
+    check(`active ${id}: effect present in the union`, !!d && effects.has(d.effect));
+  }
+  for (const id of newPassives) {
+    const d = SKILLS[id];
+    check(`passive ${id}: category non-active`, !!d && d.category !== "active");
+    check(`passive ${id}: effect present in the union`, !!d && effects.has(d.effect));
+  }
+  check(
+    "all 8 new skill ids resolve",
+    [...newActives, ...newPassives].every((id) => id in SKILLS),
+  );
 }
 
 console.log("");
