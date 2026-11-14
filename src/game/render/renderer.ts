@@ -634,6 +634,10 @@ export class Renderer {
     }
     if (e.kind === "shooter") return { key: "raider" };
     if (e.kind === "smasher") return { key: "breaker" };
+    if (e.kind === "lancer") return { key: "breaker" };
+    if (e.kind === "mortar") return { key: "raider" };
+    if (e.kind === "orbiter") return { key: "raider" };
+    if (e.kind === "splitter") return { key: "rock:normal:1" };
     const variant = e.variant ?? "normal";
     const seed = e.size === "small" ? 0 : e.size === "medium" ? 1 : 2;
     return { key: `rock:${variant}:${seed}` };
@@ -641,8 +645,9 @@ export class Renderer {
 
   private enemyRotation(e: Enemy): number {
     if (e.isBoss) return 0;
-    if (e.kind === "rock") return e.age * 0.35 * ((e.uid & 1) === 0 ? 1 : -1);
-    if (e.kind === "shooter") {
+    if (e.kind === "rock" || e.kind === "splitter")
+      return e.age * 0.35 * ((e.uid & 1) === 0 ? 1 : -1);
+    if (e.kind === "shooter" || e.kind === "lancer" || e.kind === "mortar" || e.kind === "orbiter") {
       if (e.vx * e.vx + e.vy * e.vy > 1) return Math.atan2(e.vy, e.vx) + Math.PI / 2;
       return Math.PI;
     }

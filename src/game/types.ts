@@ -149,7 +149,14 @@ export interface SkillDef {
   capstone: string;
 }
 
-export type EnemyKind = "rock" | "shooter" | "smasher";
+export type EnemyKind =
+  | "rock"
+  | "shooter"
+  | "smasher"
+  | "lancer"
+  | "mortar"
+  | "orbiter"
+  | "splitter";
 
 export type RockVariant = "normal" | "ice" | "metal" | "explosive";
 

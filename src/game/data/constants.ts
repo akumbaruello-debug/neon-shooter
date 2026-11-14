@@ -18,6 +18,12 @@ export function setArenaWidth(px: number): void {
 export const FIXED_DT = 1 / 60;
 export const MAX_STEPS_PER_FRAME = 5;
 
+// --- hard-mode rebalance (Phase 1) ---
+/** Global enemy-HP multiplier, applied inside EnemySystem.hpScale (not bosses). */
+export const ENEMY_HP_MULT = 1.5;
+/** Boss tempo: scales pattern durations and phase-transition time (tighter fights). */
+export const BOSS_TEMPO = 0.85;
+
 export const MAX_STAGES = 50;
 export const TIER_EVERY = 4;
 export const BOSS_STAGES = [10, 20, 30, 40, 50] as const;

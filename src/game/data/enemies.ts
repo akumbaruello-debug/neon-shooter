@@ -137,6 +137,68 @@ export const SMASHERS: Record<Size, EnemyDef> = {
   },
 };
 
+// --- hard-mode specialists (Phase 1) -----------------------------------
+
+/** Fast continuous pursuit; rams on contact and is consumed (no ranged attack). */
+export const LANCER: EnemyDef = {
+  id: "lancer",
+  kind: "lancer",
+  name: "Lancer",
+  hp: 26,
+  damage: 16,
+  radius: 22,
+  speed: 330,
+  score: 70,
+  xp: 22,
+  color: 0xffd166,
+  accent: 0xfff2b0,
+};
+
+/** Drifts to a standoff and lobs slow 3-shell spreads that lead the player. */
+export const MORTAR: EnemyDef = {
+  id: "mortar",
+  kind: "mortar",
+  name: "Mortar",
+  hp: 55,
+  damage: 18,
+  radius: 30,
+  speed: 85,
+  score: 80,
+  xp: 26,
+  color: 0x9b6bff,
+  accent: 0xd9c2ff,
+};
+
+/** Circles the player at a fixed radius and fires rapid aimed shots. */
+export const ORBITER: EnemyDef = {
+  id: "orbiter",
+  kind: "orbiter",
+  name: "Orbiter",
+  hp: 45,
+  damage: 10,
+  radius: 24,
+  speed: 230,
+  score: 75,
+  xp: 25,
+  color: 0x36d6e0,
+  accent: 0xbdf6ff,
+};
+
+/** Slow chaser; splits into 2 small splitters once on death. */
+export const SPLITTER: EnemyDef = {
+  id: "splitter",
+  kind: "splitter",
+  name: "Splitter",
+  hp: 60,
+  damage: 14,
+  radius: 38,
+  speed: 65,
+  score: 85,
+  xp: 28,
+  color: 0x7bd88f,
+  accent: 0xd6ffdf,
+};
+
 // --- indexes -----------------------------------------------------------
 
 export const ALL_ENEMY_IDS: string[] = [
@@ -145,6 +207,10 @@ export const ALL_ENEMY_IDS: string[] = [
   ),
   SHOOTER.id,
   ...SIZES.map((s) => SMASHERS[s].id),
+  LANCER.id,
+  MORTAR.id,
+  ORBITER.id,
+  SPLITTER.id,
 ];
 
 export const ENEMY_INDEX: Record<string, EnemyDef> = Object.fromEntries(
@@ -154,5 +220,9 @@ export const ENEMY_INDEX: Record<string, EnemyDef> = Object.fromEntries(
     ),
     SHOOTER,
     ...SIZES.map((s) => SMASHERS[s]),
+    LANCER,
+    MORTAR,
+    ORBITER,
+    SPLITTER,
   ].map((e) => [e.id, e]),
 );

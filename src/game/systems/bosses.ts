@@ -6,7 +6,7 @@
  * player's bullets lower its hp; this system reacts to that hp to drive phases
  * and death, and is fully self-sufficient if `onDamaged` is never wired.
  */
-import { ENEMY_BULLET, SPAWN_FX_TIME } from "../data/constants";
+import { BOSS_TEMPO, ENEMY_BULLET, SPAWN_FX_TIME } from "../data/constants";
 import { ARENA_H, ARENA_W } from "../data/constants";
 import { getBoss } from "../data/bosses";
 import { angleDelta, clamp, TAU } from "../core/math";
@@ -16,11 +16,11 @@ import type { BossDef } from "../types";
 import type { EnemySystem } from "./enemies";
 
 const INTRO_TIME = 4;
-const TRANSITION_TIME = 1.5;
+const TRANSITION_TIME = 1.5 * BOSS_TEMPO;
 const DEATH_TIME = 1.2;
 const BOSS_Y = 220;
 const FAN_STEP = 0.3; // rad -> >= 156 px gap between neighbours at ~600 px
-const HEAVY_GAP = 1.6;
+const HEAVY_GAP = 1.3; // post-heavy-pattern cooldown (was 1.6; tighter under BOSS_TEMPO)
 const EXPOSE_TIME = 6;
 const HOSTILE_CAP = 14;
 
@@ -319,7 +319,7 @@ export class BossSystem {
     if (!def) return;
 
     const frac = b.hp / Math.max(1, b.hpMax);
-    if (!b.enrage && def.enragePatterns && def.enragePatterns.length > 0 && frac < 0.25) {
+    if (!b.enrage && def.enragePatterns && def.enragePatterns.length > 0 && frac < 0.35) {
       b.enrage = true;
       this.ctx.toast("ENRAGE", 0xff2a2a);
       this.ctx.shake(10);
@@ -487,7 +487,7 @@ export class BossSystem {
     this.laneXs.length = 0;
     this.laserRefs.length = 0;
 
-    let dur = DURATION[id] ?? 3;
+    let dur = (DURATION[id] ?? 3) * BOSS_TEMPO;
     if (b.enrage) dur *= 0.72;
     this.patternDur = dur;
     this.patternTimer = dur;

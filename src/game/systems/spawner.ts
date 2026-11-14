@@ -24,7 +24,7 @@ import type { RockVariant, StageDef } from "../types";
 import type { EnemySystem } from "./enemies";
 import { clamp } from "../core/math";
 
-type SpawnKind = "rock" | "shooter" | "smasher";
+type SpawnKind = "rock" | "shooter" | "smasher" | "lancer" | "mortar" | "orbiter" | "splitter";
 
 interface SpawnEvent {
   t: number;
@@ -47,10 +47,22 @@ const CORRIDOR_HALF = 170;
 
 function resolveId(id: string): { kind: SpawnKind; variant: RockVariant; size: Size3 } {
   if (id === "raider") return { kind: "shooter", variant: "normal", size: "small" };
+  if (id === "lancer") return { kind: "lancer", variant: "normal", size: "small" };
+  if (id === "mortar") return { kind: "mortar", variant: "normal", size: "small" };
+  if (id === "orbiter") return { kind: "orbiter", variant: "normal", size: "small" };
+  // Stage splitters are "medium" so they split; children are spawned "small".
+  if (id === "splitter") return { kind: "splitter", variant: "normal", size: "medium" };
   const parts = id.split("_");
   const size = (parts[parts.length - 1] ?? "small") as Size3;
   if (parts[0] === "breaker") return { kind: "smasher", variant: "normal", size };
   return { kind: "rock", variant: (parts[1] ?? "normal") as RockVariant, size };
+}
+
+/** Concurrent-cap family for a spawn kind. `none` = uncapped (rock-like). */
+function familyOf(kind: SpawnKind): "rammer" | "ranged" | "none" {
+  if (kind === "smasher" || kind === "lancer") return "rammer";
+  if (kind === "shooter" || kind === "mortar" || kind === "orbiter") return "ranged";
+  return "none";
 }
 
 export class StageDirector {
@@ -105,8 +117,10 @@ export class StageDirector {
     if (this.releaseTimer > 0) this.releaseTimer -= dt;
     while (this.releaseTimer <= 0) {
       const idx = this.pending.findIndex((ev) => {
-        const live = ev.kind === "smasher" ? this.rammerCount() : this.enemies.shooterCount();
-        const cap = ev.kind === "smasher" ? this.rammerCap() : this.shooterCap();
+        const fam = familyOf(ev.kind);
+        if (fam === "none") return true;
+        const live = fam === "rammer" ? this.rammerCount() : this.enemies.rangedCount();
+        const cap = fam === "rammer" ? this.rammerCap() : this.shooterCap();
         return live < cap;
       });
       if (idx < 0) break;
@@ -189,16 +203,16 @@ export class StageDirector {
       let t = wave.at;
       for (let i = 0; i < count; i++) {
         const req = resolveId(rng.pick(wave.kinds));
-        const forSmasher = req.kind === "smasher";
-        const p = this.edgePoint(req.kind, forSmasher);
+        const topOnly = req.kind === "smasher" || req.kind === "lancer";
+        const p = this.edgePoint(req.kind, topOnly);
         events.push({ t, kind: req.kind, variant: req.variant, size: req.size, x: p.x, y: p.y });
         if (burst) continue;
-        // Smashers get a tight 0.15-0.3s stagger so several never telegraph as a wall,
-        // but still honour wave.spacing (0.7x, matching the rock cadence) for wider
-        // stagger in breaker-only waves — never a single burst.
-        t += forSmasher
+        // Smashers/lancers get a tight 0.15-0.3s stagger so several never
+        // telegraph as a wall; rocks/splitters use the 0.7x rock cadence;
+        // ranged use full spacing.
+        t += topOnly
           ? Math.max(rng.range(0.15, 0.3), wave.spacing * 0.7)
-          : req.kind === "rock"
+          : req.kind === "rock" || req.kind === "splitter"
             ? wave.spacing * 0.7
             : wave.spacing;
       }
@@ -209,10 +223,10 @@ export class StageDirector {
     this.totalPlanned = events.length;
   }
 
-  /** Top edge mostly; side edges for variety. Smashers always dive from the top. */
+  /** Top edge mostly; side edges for variety. Smashers/lancers always dive from the top. */
   private edgePoint(kind: SpawnKind, forSmasher: boolean): { x: number; y: number } {
     const rng = this.ctx.rng;
-    const sideChance = kind === "shooter" ? 0.4 : 0.12;
+    const sideChance = kind === "shooter" || kind === "mortar" || kind === "orbiter" ? 0.4 : 0.12;
     if (!forSmasher && rng.chance(sideChance)) {
       const left = rng.chance(0.5);
       const x = left ? -60 : ARENA_W + 60;
@@ -282,18 +296,23 @@ export class StageDirector {
     );
   }
 
-  /** Live rammer count straight off the enemy pool (read-only; no enemies.ts hook). */
+  /** Live rammer count: breakers (smashers) + lancers. */
   private rammerCount(): number {
     let n = 0;
-    for (const e of pools.enemies.all()) if (e.active && e.kind === "smasher") n++;
+    for (const e of pools.enemies.all()) {
+      if (e.active && (e.kind === "smasher" || e.kind === "lancer")) n++;
+    }
     return n;
   }
 
   private dispatch(e: SpawnEvent): void {
+    const fam = familyOf(e.kind);
     const capped =
-      e.kind === "shooter"
-        ? this.enemies.shooterCount() >= this.shooterCap()
-        : e.kind === "smasher" && this.rammerCount() >= this.rammerCap();
+      fam === "rammer"
+        ? this.rammerCount() >= this.rammerCap()
+        : fam === "ranged"
+          ? this.enemies.rangedCount() >= this.shooterCap()
+          : false;
     if (capped) {
       this.pending.push(e); // released later as slots free up, never dropped
       return;
@@ -312,6 +331,18 @@ export class StageDirector {
         break;
       case "smasher":
         this.enemies.spawnSmasher(e.size, e.x, e.y);
+        break;
+      case "lancer":
+        this.enemies.spawnLancer(e.x, e.y);
+        break;
+      case "mortar":
+        this.enemies.spawnMortar(e.x, e.y);
+        break;
+      case "orbiter":
+        this.enemies.spawnOrbiter(e.x, e.y);
+        break;
+      case "splitter":
+        this.enemies.spawnSplitter(e.size, e.x, e.y);
         break;
     }
   }

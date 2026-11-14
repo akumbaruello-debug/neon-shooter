@@ -10,6 +10,7 @@
 import { BOSSES } from "../src/game/data/bosses";
 import {
   MAX_STAGES,
+  ENEMY_HP_MULT,
   RAMMER_BASE_CAP,
   RAMMER_CAP_EVERY,
   RAMMER_HARD_CAP,
@@ -241,21 +242,22 @@ function computeStage(s: StageDef): StageRow {
     const burst =
       wave.burst === true || (s.composition === "meteor_shower" && w === s.waves.length - 1);
     // StageDirector spacing, averaged over the kinds this wave can roll:
-    // smasher max(0.225, 0.7*spacing), rock 0.7*spacing, shooter spacing.
+    // smasher/lancer max(0.225, 0.7*spacing), rock/splitter 0.7*spacing,
+    // shooter/mortar/orbiter full spacing.
     const spacing = mean(
       wave.kinds.map((k) => {
         const kind = enemyFor(k).kind;
-        return kind === "smasher"
+        return kind === "smasher" || kind === "lancer"
           ? Math.max(0.225, wave.spacing * 0.7)
-          : kind === "rock"
+          : kind === "rock" || kind === "splitter"
             ? wave.spacing * 0.7
             : wave.spacing;
       }),
     );
 
-    // EnemySystem scales HP by 1.15^tier; quantity scaling is this wave count,
-    // not a second HP multiplier.
-    const hp = hpPer * hpMult;
+    // EnemySystem scales HP by 1.15^tier * ENEMY_HP_MULT. Quantity scaling is
+    // this wave count, not a second HP multiplier.
+    const hp = hpPer * hpMult * ENEMY_HP_MULT;
     baseCount += count;
     baseHp += count * hp;
 

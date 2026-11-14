@@ -19,7 +19,156 @@ function rot(n: number, boss?: StageComposition): StageComposition {
   return boss ?? (ROT[(n - 11) % 6] as StageComposition);
 }
 
-export const STAGES: StageDef[] = [
+// --- hard-mode stage hardening (Phase 1) -------------------------------
+
+/**
+ * Wave timing/spacing compression applied to every non-boss stage: shifts are packed
+ * to 0.62x and spawn spacing to 0.55x of the raw table (spacing scale 0.55 <= 0.6).
+ */
+export const STAGE_TEMPO = { time: 0.62, spacing: 0.55 } as const;
+
+/**
+ * Per-stage wave-count scale for non-rush stages. Defaults to 1.0 (never above raw)
+ * for absent stages. Lower values trim absolute enemy count so a stage's estimated
+ * clear fits its (compressed) target band without weakening the spacing.
+ */
+export const COUNT_SCALE: Record<number, number> = {
+  3: 0.56, 4: 0.498, 5: 0.658, 11: 0.833, 12: 0.943, 14: 0.81, 15: 0.498, 16: 0.938,
+  17: 0.523, 18: 0.873, 21: 0.583, 22: 0.803, 23: 0.498, 24: 0.498, 26: 0.748, 27: 0.373,
+  28: 0.605, 29: 0.355, 32: 0.498, 33: 0.583, 34: 0.603, 35: 0.415, 36: 0.463, 38: 0.56,
+  39: 0.498, 41: 0.408, 42: 0.433, 44: 0.498, 45: 0.498, 46: 0.435, 47: 0.38, 48: 0.423,
+};
+
+/**
+ * `smasher_rush` keeps its raw count scale (1.0, so the rush waves themselves stay
+ * intact and are never trimmed) but rewrites the size mix. Value = medium breakers out
+ * of every RUSH_KIND_DEN spawned; the rest are small. Sizes are not a contract, so this
+ * is a pure class-HP knob: each rush stage's mix is chosen (see RUSH_SURGE) as the
+ * heaviest mix that still keeps the stage estimator-consistent.
+ */
+export const RUSH_MEDIUM: Record<number, number> = {
+  8: 20, 13: 18, 19: 18, 25: 8, 31: 2, 37: 0, 43: 0, 49: 2,
+};
+export const RUSH_KIND_DEN = 20;
+
+/**
+ * Extra smasher surge appended to each `smasher_rush` stage (absolute enemies, all
+ * breakers) so its total smasher count lands well above the pre-Phase-1 engine count
+ * (~1.2-1.4x; s43 caps near 1.23x because its raw band is the tightest). The raw rush
+ * waves are left intact; this is the added pressure. The stage's non-smasher mix wave
+ * is trimmed to 1 and the target band is overridden (still shorter than and inside the
+ * raw band) to hold the harder clear.
+ */
+export const RUSH_SURGE: Record<number, number> = {
+  8: 2, 13: 4, 19: 7, 25: 10, 31: 15, 37: 23, 43: 17, 49: 24,
+};
+export const RUSH_SURGE_AT = 0.25;
+export const RUSH_SURGE_SPACING = 0.5;
+
+/** Small-heavy breaker mix used by the appended surge waves. */
+const BREAKER_MIX = ["breaker_small", "breaker_small", "breaker_medium"];
+
+/** One appended breaker surge per stage >= 3; absolute size grows with tier. */
+export const SMASHER_EXTRA = { base: 3, perTier: 1, atFrac: 0.5, spacing: 0.45 } as const;
+
+/** One appended wave per stage drawn from the sector pool so every new specialist kind stays in play. */
+export const MIX_POOLS: Record<StageDef["sector"], string[]> = {
+  1: ["mortar"],
+  2: ["lancer"],
+  3: ["orbiter"],
+  4: ["splitter"],
+  5: ["mortar", "lancer", "orbiter", "splitter"],
+};
+export const MIX_WAVE = { base: 2, perTier: 0, atFrac: 0.75, spacing: 0.7 } as const;
+
+/**
+ * Target-band overrides where integer count rounding makes the exact 0.75x band
+ * unreachable in one jump. Every value is shorter than the raw (pre-Phase-1) band.
+ * All other stages use [round(0.75*lo), round(0.75*hi)].
+ */
+export const STAGE_BANDS: Record<number, [number, number]> = {
+  8: [39, 44], 13: [42, 55], 19: [46, 59], 25: [46, 59], 31: [48, 59], 37: [50, 59],
+  39: [34, 39], 43: [52, 59], 49: [56, 59],
+};
+
+/**
+ * Boss stages track the boss tempo (targetSeconds x0.8, matching data/bosses.ts)
+ * so the boss band-consistency check in scripts/balance.ts stays coherent.
+ */
+export const BOSS_STAGE_TEMPO = 0.8;
+
+const r2 = (n: number): number => Math.round(n * 100) / 100;
+
+/** Apply the hard-mode tempo + mixing to one raw stage. Pure; called at export. */
+function hardenStage(raw: StageDef): StageDef {
+  const [lo, hi] = raw.targetSeconds;
+  if (raw.isBoss) {
+    return {
+      ...raw,
+      targetSeconds: [Math.round(lo * BOSS_STAGE_TEMPO), Math.round(hi * BOSS_STAGE_TEMPO)],
+    };
+  }
+
+  const { time, spacing: spScale } = STAGE_TEMPO;
+  const isRush = raw.composition === "smasher_rush";
+  const scale = isRush ? 1 : (COUNT_SCALE[raw.stage] ?? 1);
+
+  const waves = raw.waves.map((w) => {
+    const count = Math.max(1, Math.round(w.count * scale));
+    const spacing = r2(w.spacing * spScale);
+    let kinds = w.kinds;
+    if (isRush) {
+      const medium = RUSH_MEDIUM[raw.stage] ?? 0;
+      kinds = [
+        ...Array(RUSH_KIND_DEN - medium).fill("breaker_small"),
+        ...Array(medium).fill("breaker_medium"),
+      ];
+    }
+    return { ...w, kinds, count, at: r2(w.at * time), spacing };
+  });
+
+  const mid = (Math.round(lo * time) + Math.round(hi * time)) / 2;
+  // The engine multiplies every wave's count by 1.1^tier. Normalise the appended
+  // waves against that so the INTENDED absolute size (base + tier*perTier) is
+  // what actually spawns; otherwise 1.1^tier inflates them ~3x by tier 12 into a
+  // one-type flood that also spills past the stage's schedule band.
+  const qty = Math.pow(1.1, raw.tier);
+  const norm = (target: number): number => Math.max(1, Math.round(target / qty));
+
+  // Breaker surge from stage 3 on; absolute size grows with tier (base + tier*perTier).
+  if (raw.stage >= 3) {
+    waves.push({
+      kinds: BREAKER_MIX,
+      count: Math.max(3, Math.round((SMASHER_EXTRA.base + raw.tier * SMASHER_EXTRA.perTier) / qty)),
+      at: r2(mid * SMASHER_EXTRA.atFrac),
+      spacing: SMASHER_EXTRA.spacing,
+    });
+  }
+
+  // Extra smasher pressure on rush stages (raw rush waves stay intact).
+  if (isRush) {
+    waves.push({
+      kinds: BREAKER_MIX,
+      count: Math.max(1, Math.round((RUSH_SURGE[raw.stage] ?? 0) / qty)),
+      at: r2(mid * RUSH_SURGE_AT),
+      spacing: RUSH_SURGE_SPACING,
+    });
+  }
+
+  // Mixed specialist wave so no stage floods a single type. Trimmed on rush stages
+  // (the non-smasher wave) to offset the added smasher HP.
+  waves.push({
+    kinds: MIX_POOLS[raw.sector],
+    count: isRush ? Math.max(1, Math.round(1 / qty)) : norm(MIX_WAVE.base + raw.tier * MIX_WAVE.perTier),
+    at: r2(mid * MIX_WAVE.atFrac),
+    spacing: MIX_WAVE.spacing,
+  });
+
+  const band = STAGE_BANDS[raw.stage] ?? [Math.round(lo * 0.75), Math.round(hi * 0.75)];
+  return { ...raw, targetSeconds: band, waves };
+}
+
+const RAW_STAGES: StageDef[] = [
   // ------------------------------------------------------------ sector 1
   {
     stage: 1, tier: 0, sector: 1, composition: "rock_intro", isBoss: false,
@@ -584,6 +733,9 @@ export const STAGES: StageDef[] = [
     waves: [],
   },
 ];
+
+/** Transformed (hard-mode) stage table. All engine + balance code reads this. */
+export const STAGES: StageDef[] = RAW_STAGES.map(hardenStage);
 
 export function getStage(n: number): StageDef {
   return STAGES[Math.max(0, Math.min(49, n - 1))]!;

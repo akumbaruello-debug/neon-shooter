@@ -10,13 +10,14 @@ import {
   ARENA_H,
   ARENA_W,
   ENEMY_BULLET,
+  ENEMY_HP_MULT,
   HITSTOP_BIG_KILL,
   MIN_SPAWN_DIST_FROM_PLAYER,
   PITY_REPAIR_MIN_GAP,
   SPAWN_FX_TIME,
   SPAWN_GRACE,
 } from "../data/constants";
-import { ROCKS, SHOOTER, SMASHERS } from "../data/enemies";
+import { LANCER, MORTAR, ORBITER, ROCKS, SHOOTER, SMASHERS, SPLITTER } from "../data/enemies";
 import { clamp, damp, dist2, normalize, TAU } from "../core/math";
 import { nextSpawnId, pools, type Enemy, type Size3 } from "../entities";
 import type { GameCtx } from "../ctx";
@@ -28,6 +29,11 @@ const SHOOTER_PATTERNS = ["sine", "orbit", "v_entry", "patrol"] as const;
 const BULLET_SPEED = 260;
 const EXPLOSIVE_RADIUS = 140;
 const SMASHER_CHARGE_TIMEOUT = 8;
+/** Mortar standoff distance from the player. */
+const MORTAR_STANDOFF = 420;
+const MORTAR_BULLET_SPEED = 175;
+/** Orbiter ring radius around the player. */
+const ORBITER_RADIUS = 280;
 
 export class EnemySystem {
   /** Pity timer: seconds since the last repair drop. */
@@ -43,7 +49,7 @@ export class EnemySystem {
 
   // ---------------------------------------------------------------- scaling
   private get hpScale(): number {
-    return Math.pow(1.15, this.ctx.tier);
+    return Math.pow(1.15, this.ctx.tier) * ENEMY_HP_MULT;
   }
   private get dmgScale(): number {
     return Math.pow(1.08, this.ctx.tier);
@@ -88,6 +94,18 @@ export class EnemySystem {
         case "smasher":
           this.stepSmasher(e, dt);
           break;
+        case "lancer":
+          this.stepLancer(e, dt);
+          break;
+        case "mortar":
+          this.stepMortar(e, dt);
+          break;
+        case "orbiter":
+          this.stepOrbiter(e, dt);
+          break;
+        case "splitter":
+          this.stepSplitter(e, dt);
+          break;
       }
       if (!e.active) continue;
 
@@ -103,7 +121,14 @@ export class EnemySystem {
         // exactly once; it cannot multi-hit. Bosses never reach here (the
         // `isBoss` continue above). This runs before collisions.enemyContact,
         // which then sees the player already invulnerable and skips the contact.
-        if (e.kind === "smasher" || e.kind === "rock") {
+        // Lancer rams and splitter (chaser) are consumed too; the ranged
+        // specialists (mortar/orbiter) are never consumed by contact.
+        if (
+          e.kind === "smasher" ||
+          e.kind === "rock" ||
+          e.kind === "lancer" ||
+          e.kind === "splitter"
+        ) {
           this.damage(e, 999999, false, p.x, p.y);
         }
       }
@@ -299,6 +324,98 @@ export class EnemySystem {
     t.color = e.accent;
   }
 
+  // ------------------------------------------------- new specialists (Phase 1)
+
+  /** Lancer: direct homing pursuit; consumed on a landed ram. */
+  private stepLancer(e: Enemy, dt: number): void {
+    const p = this.ctx.player;
+    const d = normalize(p.x - e.x, p.y - e.y);
+    const sp = e.speed;
+    e.dirX = d.x;
+    e.dirY = d.y;
+    e.vx = d.x * sp;
+    e.vy = d.y * sp;
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    e.phase += dt;
+  }
+
+  /** Mortar: hold a standoff ring and lob slow, player-leading 3-shell spreads. */
+  private stepMortar(e: Enemy, dt: number): void {
+    const p = this.ctx.player;
+    const dx = e.x - p.x;
+    const dy = e.y - p.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const tx = clamp(p.x + (dx / dist) * MORTAR_STANDOFF, e.radius, ARENA_W - e.radius);
+    const ty = clamp(p.y + (dy / dist) * MORTAR_STANDOFF, e.radius, ARENA_H - e.radius);
+    const nx = damp(e.x, tx, 1.4, dt);
+    const ny = damp(e.y, ty, 1.4, dt);
+    e.vx = nx - e.x;
+    e.vy = ny - e.y;
+    e.x = nx;
+    e.y = ny;
+    e.phase += dt;
+
+    e.fireTimer -= dt;
+    if (e.fireTimer <= 0) {
+      e.fireTimer += e.fireInterval;
+      this.fireMortar(e);
+    }
+  }
+
+  private fireMortar(e: Enemy): void {
+    const p = this.ctx.player;
+    const lead = 0.45;
+    const tx = p.x + p.vx * lead;
+    const ty = p.y + p.vy * lead;
+    const a = Math.atan2(ty - e.y, tx - e.x);
+    for (let i = -1; i <= 1; i++) {
+      this.ctx.spawnEnemyBullet({
+        x: e.x,
+        y: e.y,
+        angle: a + i * 0.2,
+        speed: MORTAR_BULLET_SPEED,
+        radius: 11,
+        damage: e.damage,
+        color: ENEMY_BULLET.body,
+        accent: ENEMY_BULLET.core,
+        lifetime: 6,
+      });
+    }
+    this.ctx.sfxAt("warn_beep", e.x, e.y, { volume: 0.3 });
+  }
+
+  /** Orbiter: tangential circle at a fixed radius, rapid aimed shots. */
+  private stepOrbiter(e: Enemy, dt: number): void {
+    const p = this.ctx.player;
+    e.phase += (e.speed / ORBITER_RADIUS) * dt;
+    const tx = clamp(p.x + Math.cos(e.phase) * ORBITER_RADIUS, e.radius, ARENA_W - e.radius);
+    const ty = clamp(p.y + Math.sin(e.phase) * ORBITER_RADIUS, e.radius, ARENA_H - e.radius);
+    const nx = damp(e.x, tx, 4, dt);
+    const ny = damp(e.y, ty, 4, dt);
+    e.vx = nx - e.x;
+    e.vy = ny - e.y;
+    e.x = nx;
+    e.y = ny;
+
+    e.fireTimer -= dt;
+    if (e.fireTimer <= 0) {
+      e.fireTimer += e.fireInterval;
+      this.fire(e);
+    }
+  }
+
+  /** Splitter: slow pursuit; splits once on death (handled in kill()). */
+  private stepSplitter(e: Enemy, dt: number): void {
+    const p = this.ctx.player;
+    const d = normalize(p.x - e.x, p.y - e.y);
+    e.vx = d.x * e.speed;
+    e.vy = d.y * e.speed;
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    e.phase += dt;
+  }
+
   // ---------------------------------------------------------------- factories
   spawnRock(variant: RockVariant, size: Size3, x: number, y: number): Enemy | null {
     const def = ROCKS[variant][size];
@@ -348,6 +465,56 @@ export class EnemySystem {
     e.stateTimer = this.ctx.rng.range(1.5, 2.5);
     e.dirX = 0;
     e.dirY = 1;
+    return e;
+  }
+
+  spawnLancer(x: number, y: number): Enemy | null {
+    const e = pools.enemies.spawn();
+    this.init(e, LANCER, "small", x, y);
+    e.pattern = "ram";
+    e.dirX = 0;
+    e.dirY = 1;
+    e.phase = this.ctx.rng.range(0, TAU);
+    return e;
+  }
+
+  spawnMortar(x: number, y: number): Enemy | null {
+    const e = pools.enemies.spawn();
+    this.init(e, MORTAR, "small", x, y);
+    e.pattern = "drift";
+    e.phase = this.ctx.rng.range(0, TAU);
+    e.fireInterval = this.ctx.rng.range(1.9, 2.6);
+    e.fireTimer = this.ctx.rng.range(0.8, e.fireInterval);
+    return e;
+  }
+
+  spawnOrbiter(x: number, y: number): Enemy | null {
+    const e = pools.enemies.spawn();
+    this.init(e, ORBITER, "small", x, y);
+    e.pattern = "orbit";
+    e.phase = Math.atan2(y - this.ctx.player.y, x - this.ctx.player.x);
+    e.fireInterval = this.ctx.rng.range(0.6, 1.0);
+    e.fireTimer = this.ctx.rng.range(0.3, e.fireInterval);
+    return e;
+  }
+
+  /** Splitter. `size === "small"` marks a child (no further split). */
+  spawnSplitter(size: Size3, x: number, y: number): Enemy | null {
+    const e = pools.enemies.spawn();
+    this.init(e, SPLITTER, size, x, y);
+    if (size === "small") {
+      e.radius = 22;
+      e.collisionRadius = 20;
+      e.hpMax = Math.round(e.hpMax * 0.45);
+      e.hp = e.hpMax;
+      e.xp = Math.round(e.xp * 0.5);
+      e.score = Math.round(e.score * 0.5);
+      e.damage *= 0.7;
+    }
+    e.pattern = "drift";
+    e.vx = 0;
+    e.vy = 0;
+    e.phase = this.ctx.rng.range(0, TAU);
     return e;
   }
 
@@ -494,6 +661,18 @@ export class EnemySystem {
       }
     }
 
+    // Splitters burst into two small splitters once; children are size "small"
+    // and so never re-split.
+    if (e.kind === "splitter" && e.size !== "small") {
+      for (let i = 0; i < 2; i++) {
+        const child = this.spawnSplitter("small", e.x, e.y);
+        if (child) {
+          child.vx = (i === 0 ? -1 : 1) * 70;
+          child.vy = 40;
+        }
+      }
+    }
+
     this.rollDrop(e);
     this.deathFx(e);
     pools.enemies.release(e);
@@ -562,9 +741,13 @@ export class EnemySystem {
     return total;
   }
 
-  shooterCount(): number {
+  /** Live ranged count: shooter + the ranged specialists (mortar/orbiter). */
+  rangedCount(): number {
     let n = 0;
-    for (const e of pools.enemies.all()) if (e.active && e.kind === "shooter") n++;
+    for (const e of pools.enemies.all()) {
+      if (!e.active) continue;
+      if (e.kind === "shooter" || e.kind === "mortar" || e.kind === "orbiter") n++;
+    }
     return n;
   }
 

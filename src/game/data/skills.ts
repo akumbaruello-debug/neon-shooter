@@ -159,7 +159,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0x66ffff,
     effect: "active_shockwave",
-    cooldown: 9,
+    cooldown: 5,
     levels: [
       { desc: "Expanding ring deals 90 damage, knocks back, erases enemy bullets.", value: 90 },
       { desc: "Ring deals 110 damage over a larger radius.", value: 110 },
@@ -175,7 +175,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0x66ff88,
     effect: "active_repair",
-    cooldown: 16,
+    cooldown: 10,
     levels: [
       { desc: "Heal 18 hull over 3s.", value: 18 },
       { desc: "Heal 22 hull over 3s.", value: 22 },
@@ -191,7 +191,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0x66b3ff,
     effect: "active_barrier",
-    cooldown: 18,
+    cooldown: 11,
     levels: [
       { desc: "1.2s invulnerable bubble.", value: 1.2 },
       { desc: "1.2s invulnerable bubble, slightly larger.", value: 1.2 },
@@ -207,7 +207,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0xffaa33,
     effect: "active_missiles",
-    cooldown: 12,
+    cooldown: 7,
     levels: [
       { desc: "Launch 6 homing missiles.", value: 6 },
       { desc: "Launch 8 homing missiles.", value: 8 },
@@ -223,7 +223,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0x9966ff,
     effect: "active_gravity",
-    cooldown: 15,
+    cooldown: 9,
     levels: [
       { desc: "Pull and crush rocks/smashers for 50 damage.", value: 50 },
       { desc: "Pull and crush rocks/smashers for 60 damage.", value: 60 },
@@ -239,7 +239,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0xffff33,
     effect: "active_overdrive",
-    cooldown: 22,
+    cooldown: 13,
     levels: [
       { desc: "Fire rate +30% and move speed +10% for 4s.", value: 30 },
       { desc: "Fire rate +35% and move speed +10% for 4s.", value: 35 },
@@ -255,7 +255,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0x99ddff,
     effect: "active_chrono",
-    cooldown: 20,
+    cooldown: 12,
     levels: [
       { desc: "Slow enemies and bullets to 45% for 3s.", value: 45 },
       { desc: "Slow enemies and bullets to 40% for 3s.", value: 40 },
@@ -271,7 +271,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     category: "active",
     color: 0xcc66ff,
     effect: "active_ion",
-    cooldown: 25,
+    cooldown: 15,
     levels: [
       { desc: "Lightning strikes random enemies for 5s, 40 damage per strike.", value: 40 },
       { desc: "Lightning strikes random enemies for 5s, 50 damage per strike.", value: 50 },
